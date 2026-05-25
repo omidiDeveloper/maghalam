@@ -1,0 +1,41 @@
+<resources>
+    <!-- name -->
+    <string name="app_name">مقالم</string>
+
+    <!-- intro screen -->
+    <string name="introsc_welcome_txt1">به</string>
+    <string name="introsc_welcome_txt2">خوش آمدید</string>
+    <string name="introsc_welcome_body">یک پلتفرم کاملا برای ساخت مقالات با هوش مصنوعی\n و خواندن و دانلود مقالات است!</string>
+    <string name="introsc_btn_lets_go">بزن بریم!</string>
+
+    <!-- login screen -->
+    <string name="loginsc_welcome_txt">خوش برگشتی</string>
+    <string name="loginsc_user_email_txt">نام کاربری یا ایمیل را وارد کنید</string>
+    <string name="loginsc_password_txt">رمز عبور را وارد کنید</string>
+    <string name="loginsc_btn_login_txt">ورود</string>
+    <string name="loginsc_no_account_txt">حساب کاربری ندارید؟</string>
+
+    <!-- register screen -->
+    <string name="registersc_join_now_txt1">همین حالا به ما ملحق شو و از امکانات </string>
+    <string name="registersc_join_now_txt2">استفاده کن!</string>
+    <string name="registersc_name_family_txt">نام و نام خانوادگی </string>
+    <string name="registersc_user_txt">نام کاربری</string>
+    <string name="registersc_email_txt">ایمیل</string>
+    <string name="registersc_password">رمز عبور</string>
+    <string name="registersc_re_password">تکرار رمز عبور</string>
+    <string name="registersc_btn_register">ثبت نام</string>
+    <string name="registersc_have_account">حساب کاربری از قبل دارید؟</string>
+    <string name="registersc_success">ثبت نام موفق</string>
+    <string name="registersc_failed">ثبت نام ناموفق</string>
+
+    <!-- home screen -->
+    <!-- ai screen -->
+
+    <!-- settings screen -->
+
+</resources>
+
+
+
+
+
