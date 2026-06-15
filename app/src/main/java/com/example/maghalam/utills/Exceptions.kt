@@ -17,18 +17,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import com.example.maghalam.ui.features.register.RegisterScreenView
 import kotlinx.coroutines.launch
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.*
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.PathParser
-import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlin.math.atan2
 
 fun Modifier.slideUpAnimation(
     durationMillis: Int = 800,
@@ -78,62 +70,5 @@ fun RtlLayout(
 }
 
 val coroutinesExceptionHandler = CoroutineExceptionHandler { _ , throwable ->
-    Log.v("exceptions" , "Error -> " + throwable.message!!)
-}
-
-
-
-
-@Composable
-fun HandwriteWord(
-    pathData: Int,
-    modifier: Modifier = Modifier,
-    duration: Int = 3000,
-    strokeWidth: Dp = 6.dp,
-    color: Color = Color(0xFF2C3E73)
-) {
-    val path = remember(pathData) {
-        PathParser().parsePathString(pathData.toString()).toPath()
-    }
-
-    val anim = remember { Animatable(0f) }
-
-    LaunchedEffect(pathData) {
-        anim.snapTo(0f)
-        anim.animateTo(1f, animationSpec = tween(duration))
-    }
-
-    Canvas(modifier) {
-        val measure = PathMeasure()
-        measure.setPath(path, false)
-
-        val length = measure.length
-        val drawLength = length * anim.value
-        val drawn = Path()
-        measure.getSegment(0f, drawLength, drawn, startWithMoveTo = true)
-
-        drawPath(
-            path = drawn,
-            color = color,
-            style = Stroke(
-                width = strokeWidth.toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round
-            )
-        )
-
-        if (drawLength > 0f) {
-            val point = measure.getPosition(drawLength)
-            val tangent = measure.getTangent(drawLength)
-            val angle = Math.toDegrees(atan2(tangent.y, tangent.x).toDouble()).toFloat()
-
-            drawCircle(
-                color = Color.Black,
-                radius = 5.dp.toPx(),
-                center = point
-            )
-
-        }
-    }
-
+    Log.v("exceptions" , "Error -> ${throwable.message.orEmpty()}")
 }

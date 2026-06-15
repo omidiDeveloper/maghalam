@@ -38,24 +38,24 @@ data class UserEntity(
 )
 
 // Mappers
-fun UserEntity.toUser(): User = User(
-    id = id,
+fun User.toEntity(): UserEntity = UserEntity(
+    id = id ?: 0L,
     fullName = fullName,
     username = username,
-    role = role,
     email = email,
+    role = role,
     publishedArticlesCount = publishedArticlesCount,
     darkMode = darkMode,
     fontSize = fontSize,
     createdAt = createdAt
 )
 
-fun User.toEntity(): UserEntity = UserEntity(
-    id = id ?: 0,
+fun UserEntity.toDomain(): User = User(
+    id = id,
     fullName = fullName,
     username = username,
-    role = role,
     email = email,
+    role = role,
     publishedArticlesCount = publishedArticlesCount,
     darkMode = darkMode,
     fontSize = fontSize,

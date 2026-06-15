@@ -1,36 +1,70 @@
 package com.example.maghalam
 
 import android.app.Application
+import com.example.maghalam.di.appModule
 import com.example.maghalam.model.repository.TokenInMemory
 import com.example.maghalam.utills.SharedPreferencesManager
+import org.koin.android.ext.koin.androidContext
+import org.koin.core.context.startKoin
+
 
 class MyApplication : Application() {
 
-    lateinit var sharedPreferencesManager: SharedPreferencesManager
-        private set
 
     override fun onCreate() {
         super.onCreate()
-        instance = this
 
-        // مقداردهی SharedPreferences
-        sharedPreferencesManager = SharedPreferencesManager(this)
 
-        // بارگذاری token از SharedPreferences به TokenInMemory
-        val savedToken = sharedPreferencesManager.getToken()
-        if (!savedToken.isNullOrEmpty()) {
-            TokenInMemory.saveToken(savedToken)
+        startKoin {
 
-            val username = sharedPreferencesManager.getUsername()
-            val userId = sharedPreferencesManager.getUserId()
-            if (username != null && userId != -1L) {
-                TokenInMemory.saveUserInfo(username, userId)
-            }
+            androidContext(this@MyApplication)
+
+            modules(
+                appModule
+            )
         }
+
+
+        // Load token after Koin is ready
+        loadToken()
+
     }
 
-    companion object {
-        lateinit var instance: MyApplication
-            private set
+
+
+    private fun loadToken() {
+
+        val preferences =
+            SharedPreferencesManager(this)
+
+
+        val savedToken =
+            preferences.getToken()
+
+
+        if (!savedToken.isNullOrEmpty()) {
+
+            TokenInMemory.saveToken(
+                savedToken,
+                preferences.getRefreshToken() ?: ""
+            )
+
+
+            val username =
+                preferences.getUsername()
+
+
+            val userId =
+                preferences.getUserId()
+
+
+            if(username != null && userId != -1L){
+
+                TokenInMemory.saveUserInfo(
+                    username,
+                    userId
+                )
+            }
+        }
     }
 }

@@ -1,6 +1,5 @@
 package com.example.maghalam.ui.features
 
-import android.R.attr.type
 import com.example.maghalam.R
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -18,7 +17,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.maghalam.di.myModule
 import com.example.maghalam.ui.features.AIScreen.AiScreen
 import com.example.maghalam.ui.features.login.LoginScreen
 import com.example.maghalam.ui.features.register.RegisterScreen
@@ -38,21 +36,23 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.compose.viewModel as androidxViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.example.maghalam.di.appModule
 import com.example.maghalam.ui.features.Items.ItemsScreen
 import com.example.maghalam.ui.features.articleDetails.ArticleDetailScreen
 import com.example.maghalam.ui.features.profile.ProfileScreen
 import com.example.maghalam.utills.RtlLayout
+import org.koin.compose.viewmodel.koinViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            Koin(appDeclaration = { modules(myModule) }) {
+            Koin(appDeclaration = { modules(appModule) }) {
                 MaghalamTheme {
                         MaghalamScreen()
                 }
@@ -116,7 +116,7 @@ fun MaghalamScreen() {
                         } else if (delta < -10f) {
                             isBottomNavVisible = true
                         }
-                    }
+                    } , viewModel = koinViewModel()
                 )
             }
             composable(Screens.ProfileScreen.rute) {
@@ -157,8 +157,9 @@ fun MaghalamScreen() {
             ) {
                 ArticleDetailScreen(
                     articleId = it.arguments?.getString("article_id") ?: "null",
-                    navController = navController
-                )
+                    navController = navController,
+                    viewModel = koinViewModel(),
+                ){}
             }
         }
 
@@ -308,7 +309,7 @@ fun MainScreen() {
         // محتوای اصلی صفحه
         when (selectedItem) {
             0 -> ItemsScreen(rememberNavController())
-            1 -> AiScreen(viewModel()){}
+            1 -> AiScreen(koinViewModel()){}
             2 -> ProfileScreen(rememberNavController())
         }
 

@@ -17,15 +17,15 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.maghalam.utills.Screens
+import org.koin.compose.viewmodel.koinViewModel
 
 
 @Composable
 fun ProfileScreen(
     navController: NavController,
-    viewModel: ProfileViewModel = viewModel(),
+    viewModel: ProfileViewModel = koinViewModel(),
     onScrollOffsetChanged: (Float) -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
@@ -71,8 +71,7 @@ fun ProfileScreen(
 
         // دکمه خروج از حساب
         LogoutButton(
-            onClick = { showLogoutDialog = true },
-            onNav = { navController.navigate(Screens.LoginScreen.rute) }
+            onClick = { showLogoutDialog = true }
         )
 
         // فاصله پایین برای Bottom Navigation
@@ -378,8 +377,7 @@ private fun AppearanceSettingsSection(
 
 @Composable
 private fun LogoutButton(
-    onClick: () -> Unit,
-    onNav : () -> Unit
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -393,7 +391,6 @@ private fun LogoutButton(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .clickable(onClick = onNav)
                 .padding(20.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically

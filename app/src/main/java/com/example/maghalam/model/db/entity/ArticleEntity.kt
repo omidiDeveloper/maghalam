@@ -43,7 +43,7 @@ data class ArticleEntity(
     val createdAt: String? = null,
 
     @ColumnInfo(name = "user_id")
-    val userId: Long = 0
+    val userId: Long? = 0
 )
 
 // Mappers

@@ -3,6 +3,7 @@ package com.example.maghalam.model.db.dao
 import androidx.room.*
 import com.example.maghalam.model.db.entity.ArticleEntity
 import kotlinx.coroutines.flow.Flow
+import retrofit2.http.DELETE
 
 @Dao
 interface ArticleDao {
@@ -42,4 +43,5 @@ interface ArticleDao {
 
     @Query("DELETE FROM articles")
     suspend fun deleteAllArticles()
+
 }

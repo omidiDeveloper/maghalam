@@ -1,7 +1,18 @@
-package com.example.maghalam.model.net.dto.response
+package com.example.maghalam.model.net.dto
 
 import com.example.maghalam.model.data.Article
 import com.google.gson.annotations.SerializedName
+
+
+data class ArticleGenerationRequest(
+    val title: String,
+    val author : String,
+    val keywords: List<String>,
+    val language: String = "fa",
+    val description: String
+)
+
+//------------------------------------------------
 
 data class ArticleResponse(
     @SerializedName("content")
@@ -28,3 +39,9 @@ data class ArticleResponse(
     @SerializedName("empty")
     val isEmpty: Boolean
 )
+
+//------------------------------------------------
+
+
+class ArticleDto {
+}

@@ -1,4 +1,4 @@
-package com.example.maghalam.model
+package com.example.maghalam.model.net.api
 
 
 import com.example.maghalam.utills.SharedPreferencesManager

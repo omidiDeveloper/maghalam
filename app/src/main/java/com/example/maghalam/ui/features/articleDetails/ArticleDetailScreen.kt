@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.maghalam.R
 
@@ -24,7 +23,7 @@ import com.example.maghalam.R
 fun ArticleDetailScreen(
     navController: NavController,
     articleId: String,
-    viewModel: ArticleDetailViewModel = viewModel(),
+    viewModel: ArticleDetailViewModel,
     onScrollOffsetChanged: (Float) -> Unit = {}
 ) {
     val article by viewModel.getArticleById(articleId).collectAsState(initial = null)
@@ -50,6 +49,7 @@ fun ArticleDetailScreen(
                 CircularProgressIndicator()
             }
         } else {
+            val currentArticle = article ?: return@Box
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -109,7 +109,7 @@ fun ArticleDetailScreen(
                                     color = MaterialTheme.colorScheme.surfaceVariant
                                 ) {
                                     Text(
-                                        text = article!!.language,
+                                        text = currentArticle.language,
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -121,7 +121,7 @@ fun ArticleDetailScreen(
 
                             // عنوان مقاله
                             Text(
-                                text = article!!.title,
+                                text = currentArticle.title,
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Right,
@@ -142,7 +142,7 @@ fun ArticleDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = article!!.author,
+                                    text = currentArticle.author,
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -172,7 +172,7 @@ fun ArticleDetailScreen(
                                     horizontalArrangement = Arrangement.End,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    article!!.keywords.reversed().forEach { keyword ->
+                                    currentArticle.getKeywordsList().asReversed().forEach { keyword ->
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
                                             color = MaterialTheme.colorScheme.secondaryContainer,
@@ -207,7 +207,7 @@ fun ArticleDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "${article!!.wordCount} کلمه",
+                                    text = "${currentArticle.wordCount} کلمه",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -233,7 +233,29 @@ fun ArticleDetailScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
 
                                 Text(
-                                    text = article!!.summary,
+                                    text = currentArticle.abstract,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.Right,
+                                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
+                                )
+                            }
+
+                            // بدنه
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.End
+                            ) {
+                                Text(
+                                    text = "بدنه",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Text(
+                                    text = currentArticle.content,
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     textAlign = TextAlign.Right,
@@ -245,7 +267,7 @@ fun ArticleDetailScreen(
 
                             // دکمه دانلود
                             Button(
-                                onClick = { /* TODO: دانلود PDF */ },
+                                onClick = { viewModel.downloadOnly() },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(

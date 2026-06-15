@@ -1,6 +1,5 @@
 package com.example.maghalam.ui.features.Items
 
-import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,26 +16,43 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.maghalam.model.data.Article
 import com.example.maghalam.R
+import org.koin.compose.viewmodel.koinViewModel
 
 
 @Composable
 fun ItemsScreen(
     navController: NavController,
-    viewModel: ItemsViewModel = viewModel(),
     onScrollOffsetChanged: (Float) -> Unit = {}
 ) {
-    val articles by viewModel.articles.collectAsState()
-    val listState = rememberLazyListState()
+//------------------------------------------------------------------------
 
+    val viewModel: ItemsViewModel = koinViewModel()
+    val listState = rememberLazyListState()
+    val article by viewModel.article.collectAsState()
+
+//------------------------------------------------------------------------
     // ردیابی تغییرات اسکرول
     LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
-        val offset = listState.firstVisibleItemIndex * 1000f + listState.firstVisibleItemScrollOffset
+        val offset =
+            listState.firstVisibleItemIndex * 1000f + listState.firstVisibleItemScrollOffset
         onScrollOffsetChanged(offset)
     }
+
+//------------------------------------------------------------------------
+
+    LaunchedEffect(Unit) {
+        viewModel.navigateToArticle.collect { id ->
+            navController.navigate(
+                "articleDetailScreen/$id"
+            )
+        }
+    }
+
+
+//------------------------------------------------------------------------
 
     // محاسبه میزان اسکرول برای محو شدن عنوان
     val titleAlpha by remember {
@@ -49,21 +65,26 @@ fun ItemsScreen(
         }
     }
 
+//------------------------------------------------------------------------
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+//------------------------------------------------------------------------
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
             // عنوان صفحه با قابلیت محو شدن
+//------------------------------------------------------------------------
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 32.dp),
                 contentAlignment = Alignment.Center
             ) {
+//------------------------------------------------------------------------
                 Text(
                     text = "لیست مقالات",
                     style = MaterialTheme.typography.headlineMedium,
@@ -71,46 +92,59 @@ fun ItemsScreen(
                     textAlign = TextAlign.Center
                 )
             }
+//------------------------------------------------------------------------
 
             Spacer(modifier = Modifier.height(24.dp))
-
+//------------------------------------------------------------------------
             // لیست مقالات
-            if (articles.isEmpty()) {
+            if (article.isEmpty()) {
                 EmptyState()
             } else {
+
+//------------------------------------------------------------------------
+
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp)
                 ) {
+
+//------------------------------------------------------------------------
+
                     items(
-                        items = articles,
-                        key = { it.id }
+                        items = article,
+                        key = { it.id ?: it.hashCode().toLong() }
                     ) { article ->
+                        val articleId = article.id
+
+//------------------------------------------------------------------------
+
                         ArticleCard(
                             article = article,
-                            onDelete = { viewModel.deleteArticle(article.id) },
+                            onDelete = { articleId?.let(viewModel::deleteArticle) },
                             onClick = {
-                                Log.v("logErrorArticleCard" , article.id)
-                                navController.navigate("articleDetailScreen/${article.id}")
+                                articleId?.let(viewModel::onArticleClicked)
                             }
                         )
+//------------------------------------------------------------------------
+
                         Spacer(modifier = Modifier.height(22.dp))
                     }
+//------------------------------------------------------------------------
 
                     // فاصله پایین برای Bottom Navigation
                     item {
                         Spacer(modifier = Modifier.height(100.dp))
                     }
+//------------------------------------------------------------------------
                 }
             }
         }
     }
 }
 
-/**
- * کارت نمایش هر مقاله
- */
+//------------------------------------------------------------------------
+
 @Composable
 private fun ArticleCard(
     article: Article,
@@ -190,7 +224,7 @@ private fun ArticleCard(
 
             // چکیده
             Text(
-                text = article.summary,
+                text = article.abstract,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Right,
@@ -207,7 +241,7 @@ private fun ArticleCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                article.keywords.take(3).forEach { keyword ->
+                article.getKeywordsList().take(3).forEach { keyword ->
                     Surface(
                         shape = MaterialTheme.shapes.small,
                         color = MaterialTheme.colorScheme.primaryContainer,
@@ -226,9 +260,8 @@ private fun ArticleCard(
     }
 }
 
-/**
- * نمایش حالت خالی
- */
+//------------------------------------------------------------------------
+
 @Composable
 private fun EmptyState() {
     Box(

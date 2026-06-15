@@ -2,7 +2,11 @@ package com.example.maghalam.model.repository
 
 
 object TokenInMemory {
-    var token: String? = null
+
+    var accessToken: String? = null
+        private set
+
+    var refreshToken: String? = null
         private set
 
     var username: String? = null
@@ -11,22 +15,27 @@ object TokenInMemory {
     var userId: Long? = null
         private set
 
-    fun saveToken(newToken: String) {
-        token = newToken
+    fun saveToken(
+        accessToken: String,
+        refreshToken: String
+    ) {
+        this.accessToken = accessToken
+        this.refreshToken = refreshToken
     }
 
-    fun saveUserInfo(newUsername: String, newUserId: Long) {
-        username = newUsername
-        userId = newUserId
+    fun saveUserInfo(
+        username: String,
+        userId : Long
+    ){
+        this.username = username
+        this.userId = userId
     }
 
-    fun clearToken() {
-        token = null
+
+    fun clear() {
+        accessToken = null
+        refreshToken = null
         username = null
         userId = null
-    }
-
-    fun isTokenAvailable(): Boolean {
-        return !token.isNullOrEmpty()
     }
 }

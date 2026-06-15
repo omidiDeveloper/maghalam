@@ -2,168 +2,380 @@ package com.example.maghalam.model.repository.user
 
 
 import com.example.maghalam.model.data.User
-import com.example.maghalam.model.net.api.ApiResponse
-import com.example.maghalam.model.net.api.AuthApiService
-import com.example.maghalam.model.net.api.UserApiService
-import com.example.maghalam.model.net.api.toApiResponse
-import com.example.maghalam.model.net.dto.request.LoginRequest
-import com.example.maghalam.model.net.dto.request.RegisterRequest
-import com.example.maghalam.model.net.dto.response.AuthResponse
+import com.example.maghalam.model.db.dao.UserDao
+import com.example.maghalam.model.db.entity.toDomain
+import com.example.maghalam.model.db.entity.toEntity
+import com.example.maghalam.model.net.api.ApiService
+import com.example.maghalam.model.net.dto.*
 import com.example.maghalam.utills.SharedPreferencesManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import java.io.IOException
 
+
+@Suppress("UNCHECKED_CAST")
 class UserRepositoryImpl(
-    private val authApiService: AuthApiService,
-    private val userApiService: UserApiService,
-    private val sharedPreferencesManager: SharedPreferencesManager
+    private val apiService: ApiService,
+    private val userDao: UserDao,
+    private val preferences: SharedPreferencesManager
 ) : UserRepository {
 
 
-    override fun login(request: LoginRequest): Flow<ApiResponse<AuthResponse>> = flow {
+    override fun login(
+        request: LoginRequest
+    ): Flow<ApiResponse<AuthResponse>> = flow {
+
         emit(ApiResponse.Loading)
+
+
         try {
-            val response = authApiService.login(request).toApiResponse()
-            if (response is ApiResponse.Success) {
-                // ذخیره token و اطلاعات کاربر
-                sharedPreferencesManager.saveToken(response.data.accessToken)
-                sharedPreferencesManager.saveToken(response.data.refreshToken)
-                sharedPreferencesManager.saveToken(response.data.user.toString())
+
+            val response =
+                apiService.login(request)
+
+
+            if (response.isSuccessful) {
+
+
+                val body =
+                    response.body()
+
+
+                if (body != null) {
+
+                    saveUserSession(body)
+
+
+                    emit(
+                        ApiResponse.Success(body)
+                    )
+
+                }
+
+
+            } else {
+
+
+                emit(
+                    ApiResponse.Error(
+                        response.code(),
+                        response.message()
+                    )
+                )
+
             }
-            emit(response)
-        } catch (e: Exception) {
+
+
+        } catch (e: IOException) {
+
+
             emit(ApiResponse.NetworkError)
+
         }
+
     }.flowOn(Dispatchers.IO)
 
-    override fun register(request: RegisterRequest): Flow<ApiResponse<AuthResponse>> = flow {
+
+    override fun register(
+        request: RegisterRequest
+    ): Flow<ApiResponse<AuthResponse>> = flow {
+
         emit(ApiResponse.Loading)
         try {
-            val response = authApiService.register(request).toApiResponse()
-            if (response is ApiResponse.Success) {
-                sharedPreferencesManager.saveToken(response.data.accessToken)
-                sharedPreferencesManager.saveRefreshToken(response.data.refreshToken)
-                sharedPreferencesManager.saveUserInfo(response.data.user.toString() , response.data.user.id!!)
+            val response =
+                apiService.register(request)
+            if (response.isSuccessful) {
+                val body =
+                    response.body()
+                if (body != null) {
+                    saveUserSession(body)
+                    emit(
+                        ApiResponse.Success(body)
+                    )
+                }
+            } else {
+                emit(
+                    ApiResponse.Error(
+                        response.code(),
+                        response.message()
+                    )
+                )
+
             }
-            emit(response)
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             emit(ApiResponse.NetworkError)
         }
+
+
     }.flowOn(Dispatchers.IO)
+
+
+    private suspend fun saveUserSession(
+        response: AuthResponse
+    ) {
+
+
+        preferences.saveTokens(
+            response.accessToken,
+            response.refreshToken
+        )
+
+
+        preferences.saveUserInfo(
+            response.user.username,
+            response.user.id ?: -1L
+        )
+
+
+        userDao.insertUser(
+            response.user.toEntity()
+        )
+
+    }
+
 
     override fun logout(): Flow<ApiResponse<Unit>> = flow {
+
+
         emit(ApiResponse.Loading)
+
+
         try {
-            val response = authApiService.logout().toApiResponse()
-            // پاک کردن داده‌های محلی صرف نظر از نتیجه
-            sharedPreferencesManager.clearAll()
-            emit(response)
-        } catch (e: Exception) {
-            sharedPreferencesManager.clearAll()
+
+
+            val response =
+                apiService.logout()
+
+
+            preferences.clearAll()
+
+            userDao.deleteAllUsers()
+
+
+
+            if (response.isSuccessful) {
+
+                emit(
+                    ApiResponse.Success(Unit)
+                )
+
+            } else {
+
+                emit(
+                    ApiResponse.Error(
+                        response.code(),
+                        response.message()
+                    )
+                )
+            }
+
+
+        } catch (e: IOException) {
+
+
+            preferences.clearAll()
+            userDao.deleteAllUsers()
+
+
             emit(ApiResponse.NetworkError)
+
         }
+
+
     }.flowOn(Dispatchers.IO)
+
 
     override fun getUserProfile(): Flow<ApiResponse<User>> = flow {
         emit(ApiResponse.Loading)
-        try {
-            val response = userApiService.getUserProfile()
-            if (response.isSuccessful) {
-                val profileResponse = response.body()
-                if (profileResponse != null) {
-                    // تبدیل UserProfileResponse به User
-                    val user = User(
-                        id = profileResponse.id,
-                        fullName = profileResponse.fullName,
-                        username = profileResponse.username,
-                        email = profileResponse.email,
-                        role = profileResponse.role,
-                        publishedArticlesCount = profileResponse.publishedArticlesCount,
-                        darkMode = profileResponse.darkMode,
-                        fontSize = profileResponse.fontSize,
-                        createdAt = profileResponse.createdAt
+        val userId =
+            preferences.getUserId()
+        userDao.getUserById(userId)
+            ?.let {
+
+                emit(
+                    ApiResponse.Success(
+                        it.toDomain()
                     )
-                    sharedPreferencesManager.saveUserInfo(user.username , user.id!!)
-                    emit(ApiResponse.Success(user))
-                } else {
-                    emit(ApiResponse.Error(response.code(), "Empty response"))
+                )
+
+            }
+        try
+        {
+            val response =
+                apiService.getUserProfile()
+
+            if (response.isSuccessful) {
+                response.body()?.let {
+
+
+                    userDao.insertUser(
+                        it.toEntity()
+                    )
+
+                    emit(
+                        ApiResponse.Success(it)
+                    )
+
                 }
-            } else {
-                emit(ApiResponse.Error(response.code(), response.errorBody()?.string() ?: "Error"))
+
             }
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             emit(ApiResponse.NetworkError)
         }
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(Dispatchers.IO) as Flow<ApiResponse<User>>
 
-    override fun updateProfile(fullName: String, email: String): Flow<ApiResponse<User>> = flow {
+
+    override fun updateProfile(
+        fullName: String,
+        email: String
+    ): Flow<ApiResponse<User>> = flow {
+
+
         emit(ApiResponse.Loading)
+
+
         try {
-            val body = mapOf("fullName" to fullName, "email" to email)
-            val response = userApiService.updateProfile(body)
-            if (response.isSuccessful) {
-                response.body()?.let { profileResponse ->
-                    val user = User(
-                        id = profileResponse.id,
-                        fullName = profileResponse.fullName,
-                        username = profileResponse.username,
-                        email = profileResponse.email,
-                        role = profileResponse.role,
-                        publishedArticlesCount = profileResponse.publishedArticlesCount,
-                        darkMode = profileResponse.darkMode,
-                        fontSize = profileResponse.fontSize,
-                        createdAt = profileResponse.createdAt
+
+            val response =
+                apiService.updateProfile(
+                    mapOf(
+                        "fullName" to fullName,
+                        "email" to email
                     )
-                    sharedPreferencesManager.saveUserInfo(user.username , user.id!!)
-                    emit(ApiResponse.Success(user))
-                } ?: emit(ApiResponse.Error(response.code(), "Empty response"))
-            } else {
-                emit(ApiResponse.Error(response.code(), response.errorBody()?.string() ?: "Error"))
-            }
-        } catch (e: Exception) {
-            emit(ApiResponse.NetworkError)
-        }
-    }.flowOn(Dispatchers.IO)
-
-    override fun updateSettings(darkMode: Boolean, fontSize: String): Flow<ApiResponse<User>> = flow {
-        emit(ApiResponse.Loading)
-        try {
-            val body = mapOf<String, Any>("darkMode" to darkMode, "fontSize" to fontSize)
-            val response = userApiService.updateSettings(body)
+                )
             if (response.isSuccessful) {
-                response.body()?.let { profileResponse ->
-                    val user = User(
-                        id = profileResponse.id,
-                        fullName = profileResponse.fullName,
-                        username = profileResponse.username,
-                        email = profileResponse.email,
-                        role = profileResponse.role,
-                        publishedArticlesCount = profileResponse.publishedArticlesCount,
-                        darkMode = profileResponse.darkMode,
-                        fontSize = profileResponse.fontSize,
-                        createdAt = profileResponse.createdAt
+
+                response.body()?.let {
+                    userDao.insertUser(
+                        it.toEntity()
                     )
-                    sharedPreferencesManager.saveUserInfo(user.username , user.id!!)
-                    emit(ApiResponse.Success(user))
-                } ?: emit(ApiResponse.Error(response.code(), "Empty response"))
+                    emit(
+                        ApiResponse.Success(it)
+                    )
+
+                }
+
             } else {
-                emit(ApiResponse.Error(response.code(), response.errorBody()?.string() ?: "Error"))
+                emit(
+                    ApiResponse.Error(
+                        response.code(),
+                        response.message()
+                    )
+                )
+
             }
-        } catch (e: Exception) {
+
+
+        } catch (e: IOException) {
+
             emit(ApiResponse.NetworkError)
+
         }
+
+
+    }.flowOn(Dispatchers.IO) as Flow<ApiResponse<User>>
+
+
+
+
+
+
+    override fun updateSettings(
+        darkMode:Boolean,
+        fontSize:String
+    ): Flow<ApiResponse<User>> = flow {
+
+
+        emit(ApiResponse.Loading)
+
+        try {
+            val response =
+                apiService.updateSettings(
+                    mapOf(
+                        "darkMode" to darkMode,
+                        "fontSize" to fontSize
+                    )
+                )
+            if(response.isSuccessful){
+
+
+                response.body()?.let {
+
+                    userDao.insertUser(
+                        it.toEntity()
+                    )
+
+                    emit(
+                        ApiResponse.Success(it)
+                    )
+                }
+
+
+            }
+
+
+
+        }catch(e: IOException){
+
+            emit(ApiResponse.NetworkError)
+
+        }
+    }.flowOn(Dispatchers.IO) as Flow<ApiResponse<User>>
+
+
+
+
+
+
+
+    override fun changePassword(
+        currentPassword:String,
+        newPassword:String
+    ): Flow<ApiResponse<Unit>> = flow {
+
+
+        emit(ApiResponse.Loading)
+
+
+        try {
+
+
+            val response =
+                apiService.changePassword(
+                    mapOf(
+                        "currentPassword" to currentPassword,
+                        "newPassword" to newPassword
+                    )
+                )
+
+
+            if(response.isSuccessful){
+
+                emit(
+                    ApiResponse.Success(Unit)
+                )
+
+            }else{
+
+                emit(
+                    ApiResponse.Error(
+                        response.code(),
+                        response.message()
+                    )
+                )
+            }
+
+
+
+        }catch(e: IOException){
+
+            emit(ApiResponse.NetworkError)
+
+        }
+
+
     }.flowOn(Dispatchers.IO)
 
-    override fun changePassword(currentPassword: String, newPassword: String): Flow<ApiResponse<Unit>> = flow {
-        emit(ApiResponse.Loading)
-        try {
-            val body = mapOf("currentPassword" to currentPassword, "newPassword" to newPassword)
-            emit(userApiService.changePassword(body).toApiResponse())
-        } catch (e: Exception) {
-            emit(ApiResponse.NetworkError)
-        }
-    }.flowOn(Dispatchers.IO)
 }
-

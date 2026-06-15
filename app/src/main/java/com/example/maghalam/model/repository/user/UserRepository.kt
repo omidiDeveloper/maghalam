@@ -1,10 +1,10 @@
 package com.example.maghalam.model.repository.user
 
 import com.example.maghalam.model.data.User
-import com.example.maghalam.model.net.api.ApiResponse
-import com.example.maghalam.model.net.dto.request.LoginRequest
-import com.example.maghalam.model.net.dto.request.RegisterRequest
-import com.example.maghalam.model.net.dto.response.AuthResponse
+import com.example.maghalam.model.net.dto.ApiResponse
+import com.example.maghalam.model.net.dto.AuthResponse
+import com.example.maghalam.model.net.dto.LoginRequest
+import com.example.maghalam.model.net.dto.RegisterRequest
 import kotlinx.coroutines.flow.Flow
 
 interface UserRepository {

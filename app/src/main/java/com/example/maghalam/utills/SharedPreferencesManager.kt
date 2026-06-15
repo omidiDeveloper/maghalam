@@ -20,9 +20,9 @@ class SharedPreferencesManager(context: Context) {
     }
 
     // Token Management
-    fun saveToken(token: String) {
+    fun saveToken(token: String , refreshToken: String) {
         sharedPreferences.edit().putString(KEY_TOKEN, token).apply()
-        TokenInMemory.saveToken(token)
+        TokenInMemory.saveToken(token ,refreshToken )
     }
 
     fun getToken(): String? {
@@ -34,7 +34,7 @@ class SharedPreferencesManager(context: Context) {
             .remove(KEY_TOKEN)
             .remove(KEY_REFRESH_TOKEN)
             .apply()
-        TokenInMemory.clearToken()
+        TokenInMemory.clear()
     }
 
     // Refresh Token Management
@@ -51,7 +51,7 @@ class SharedPreferencesManager(context: Context) {
             .putString(KEY_TOKEN, accessToken)
             .putString(KEY_REFRESH_TOKEN, refreshToken)
             .apply()
-        TokenInMemory.saveToken(accessToken)
+        TokenInMemory.saveToken(accessToken , refreshToken)
     }
 
     // User Info
@@ -60,7 +60,7 @@ class SharedPreferencesManager(context: Context) {
             .putString(KEY_USERNAME, username)
             .putLong(KEY_USER_ID, userId)
             .apply()
-        TokenInMemory.saveUserInfo(username, userId)
+        TokenInMemory.saveUserInfo(username, userId )
     }
 
     fun getUsername(): String? {
@@ -80,18 +80,20 @@ class SharedPreferencesManager(context: Context) {
         return sharedPreferences.getBoolean(KEY_DARK_MODE, false)
     }
 
-    fun saveFontSize(fontSize: String) {
-        sharedPreferences.edit().putString(KEY_FONT_SIZE, fontSize).apply()
-    }
 
     fun getFontSize(): String {
         return sharedPreferences.getString(KEY_FONT_SIZE, "Vazir") ?: "Vazir"
     }
 
+    fun saveFontSize(fontSize: String) {
+        sharedPreferences.edit().putString(KEY_FONT_SIZE, fontSize).apply()
+    }
+
+
     // Clear All Data (Logout)
     fun clearAll() {
         sharedPreferences.edit().clear().apply()
-        TokenInMemory.clearToken()
+        TokenInMemory.clear()
     }
 
     // Check if user is logged in

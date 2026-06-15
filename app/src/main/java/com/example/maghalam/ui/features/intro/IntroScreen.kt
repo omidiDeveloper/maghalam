@@ -18,12 +18,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.maghalam.R
 import com.example.maghalam.ui.features.GreetingPreview
 import com.example.maghalam.ui.theme.MaghalamTheme
+import com.example.maghalam.utills.Screens
 
 @Composable
-fun IntroScreen() {
+fun IntroScreen(
+    navController: NavController
+) {
 
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -34,7 +39,7 @@ fun IntroScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                Intro()
+                Intro(navController)
             }
         }
     }
@@ -49,14 +54,16 @@ fun IntroScreenPreview() {
             Surface(
                 modifier = Modifier.fillMaxSize()
             ) {
-                Intro()
+                Intro(rememberNavController())
             }
         }
     }
 }
 
 @Composable
-fun Intro() {
+fun Intro(
+    navController: NavController
+) {
 
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -85,7 +92,7 @@ fun Intro() {
                 )
             }
             Button(
-                onClick = {}
+                onClick = {navController.navigate(Screens.LoginScreen.rute)}
             ) {
                 Text(
                     text = stringResource(R.string.introsc_btn_lets_go),

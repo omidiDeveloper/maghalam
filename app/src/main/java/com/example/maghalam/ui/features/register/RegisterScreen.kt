@@ -25,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -53,7 +54,6 @@ import com.example.maghalam.utills.STR_INVALID_CHAR
 import com.example.maghalam.utills.STR_PASSWORD_MATCH
 import com.example.maghalam.utills.STR_SUCCESS
 import com.example.maghalam.utills.Screens
-import com.example.maghalam.utills.VALUE_SUCCESS
 import org.koin.compose.viewmodel.koinViewModel
 
 
@@ -110,19 +110,13 @@ fun RegisterScreen(
 @Composable
 fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavController) {
 
-//    val name = viewModel.name.observeAsState("")
-//    val userName = viewModel.userName.observeAsState("")
-//    val email = viewModel.email.observeAsState("")
-//    val password = viewModel.password.observeAsState("")
-//    val rePassword = viewModel.password.observeAsState("")
-//    val context = LocalContext.current
-
-    val name = remember { mutableStateOf("") }
-    val userName = remember { mutableStateOf("") }
-    val email = remember { mutableStateOf("") }
-    val password = remember { mutableStateOf("") }
-    val rePassword = remember { mutableStateOf("") }
+    val name = viewModel.name.observeAsState("")
+    val userName = viewModel.username.observeAsState("")
+    val email = viewModel.email.observeAsState("")
+    val password = viewModel.password.observeAsState("")
+    val rePassword = viewModel.rePassword.observeAsState("")
     val context = LocalContext.current
+
 
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -132,13 +126,6 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-//                HandwriteWord(
-//                    duration = 2000,
-//                    strokeWidth = 4.dp,
-//                    color = MaterialTheme.colorScheme.primary,
-//                    pathData = R.drawable.maghalam_icon_background,
-//                )
 
             Text(
                 stringResource(R.string.registersc_btn_register),
@@ -167,7 +154,7 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
                         R.string.registersc_name_family_txt,
                         R.drawable.outline_person_2_24
                     ) {
-                        name.value = it
+                        viewModel.name.value = it
                     }
 
                     //UserName box=>
@@ -176,7 +163,7 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
                         R.string.registersc_user_txt,
                         R.drawable.outline_person_2_24
                     ) {
-                        userName.value = it
+                        viewModel.username.value = it
                     }
 
                     //Email Box =>
@@ -185,7 +172,7 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
                         R.string.registersc_email_txt,
                         R.drawable.baseline_email_24
                     ) {
-                        email.value = it
+                        viewModel.email.value = it
                     }
 
                     //Password Box =>
@@ -194,7 +181,7 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
                         edtValue = password.value,
                         R.drawable.baseline_password_24,
                     ) {
-                        password.value = it
+                        viewModel.password.value = it
                     }
                     //RePassword Box =>
                     PasswordEditText(
@@ -202,7 +189,7 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
                         edtValue = rePassword.value,
                         R.drawable.baseline_password_24
                     ) {
-                        rePassword.value = it
+                        viewModel.rePassword.value = it
                     }
                     //Confirm Button =>
                     Button(
@@ -221,31 +208,31 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
                                     if (Patterns.EMAIL_ADDRESS.matcher(email.value).matches()) {
                                         if (password.value.length >= 8) {
                                             if (password.value == rePassword.value) {
-//                                                viewModel.registerUser {
-//                                                    if (it == VALUE_SUCCESS) {
+                                                viewModel.registerUser(
+                                                    onSuccess = {
+                                                        Toast.makeText(
+                                                            context,
+                                                            STR_SUCCESS,
+                                                            Toast.LENGTH_SHORT
+                                                        )
+                                                            .show()
 
-                                                Toast.makeText(
-                                                    context,
-                                                    STR_SUCCESS,
-                                                    Toast.LENGTH_SHORT
+                                                        Log.v(
+                                                            "SignUped",
+                                                            "${name.value} ${userName.value} ${email.value}"
+                                                        )
+
+                                                        navController.navigate(Screens.AiScreen.rute)
+
+                                                    },
+                                                    onError = { message ->
+                                                        Toast.makeText(
+                                                            context,
+                                                            message,
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
                                                 )
-                                                    .show()
-
-                                                Log.v(
-                                                    "SignUped",
-                                                    "${name.value} ${userName.value} ${email.value}   ${password.value}"
-                                                )
-
-                                                navController.navigate(Screens.AiScreen.rute)
-
-//                                                    } else {
-//                                                        Toast.makeText(
-//                                                            context,
-//                                                            it,
-//                                                            Toast.LENGTH_SHORT
-//                                                        ).show()
-//
-
 
                                             } else {
                                                 Toast.makeText(

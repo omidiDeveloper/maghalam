@@ -3,6 +3,8 @@ package com.example.maghalam.ui.features.AIScreen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.maghalam.model.data.Article
+import com.example.maghalam.model.net.dto.ApiResponse
+import com.example.maghalam.model.repository.TokenInMemory
 import com.example.maghalam.model.repository.article.ArticleRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,28 +14,34 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class AiViewModel(
-    private val repository: ArticleRepository = ArticleRepository.getInstance()
+    private val repository: ArticleRepository
 ) : ViewModel() {
 
+    //------------------------------------------------------------------------
     private val _uiState = MutableStateFlow(AiUiState())
     val uiState: StateFlow<AiUiState> = _uiState.asStateFlow()
 
+    //------------------------------------------------------------------------
     fun onTitleChange(newTitle: String) {
         _uiState.update { it.copy(title = newTitle, titleError = null) }
     }
 
+    //------------------------------------------------------------------------
     fun onAuthorChange(newAuthor: String) {
         _uiState.update { it.copy(author = newAuthor, authorError = null) }
     }
 
+    //------------------------------------------------------------------------
     fun onKeywordsChange(newKeywords: String) {
         _uiState.update { it.copy(keywords = newKeywords, keywordsError = null) }
     }
 
+    //------------------------------------------------------------------------
     fun onLanguageDropdownToggle() {
         _uiState.update { it.copy(isLanguageDropdownExpanded = !it.isLanguageDropdownExpanded) }
     }
 
+    //------------------------------------------------------------------------
     fun onLanguageSelect(language: String) {
         _uiState.update {
             it.copy(
@@ -43,10 +51,12 @@ class AiViewModel(
         }
     }
 
+    //------------------------------------------------------------------------
     fun onDescriptionChange(newDescription: String) {
         _uiState.update { it.copy(description = newDescription, descriptionError = null) }
     }
 
+    //------------------------------------------------------------------------
     //authorization of values =>
     private fun validateFields(): Boolean {
         var isValid = true
@@ -76,6 +86,7 @@ class AiViewModel(
         return isValid
     }
 
+    //------------------------------------------------------------------------
     //make summary via AI =>
     private suspend fun generateSummary(description: String, keywords: String): String {
         // شبیه‌سازی تاخیر API
@@ -90,6 +101,7 @@ class AiViewModel(
         }..."
     }
 
+    //------------------------------------------------------------------------
     //create article =>
     fun createArticle() {
         if (!validateFields()) {
@@ -113,15 +125,17 @@ class AiViewModel(
 
                 // ایجاد شیء مقاله
                 val article = Article(
-                    id = "article_${System.currentTimeMillis()}",
+                    id = currentState.articleId ?: System.currentTimeMillis(),
                     title = currentState.title,
                     author = currentState.author,
-                    keywords = currentState.keywords.split(",").map { it.trim() }
-                        .filter { it.isNotEmpty() },
+                    keywords = currentState.keywords,
                     language = currentState.selectedLanguage,
                     description = currentState.description,
-                    summary = summary,
-                    wordCount = currentState.wordCount
+                    content = currentState.content.ifBlank { currentState.description },
+                    abstract = summary,
+                    wordCount = currentState.description.split(Regex("\\s+")).count { it.isNotBlank() },
+                    userId = currentState.userId ?: TokenInMemory.userId
+
                 )
 
                 // ذخیره موقت مقاله در state و نمایش دیالوگ
@@ -145,14 +159,14 @@ class AiViewModel(
         }
     }
 
-
+    //------------------------------------------------------------------------
     //dismiss dialog of download article =>
     fun dismissActionDialog() {
         _uiState.update { it.copy(showActionDialog = false) }
         resetForm()
     }
 
-
+    //------------------------------------------------------------------------
     //just download without share =>
     fun downloadOnly() {
         viewModelScope.launch {
@@ -162,7 +176,6 @@ class AiViewModel(
                     isDownloading = true
                 )
             }
-
             try {
                 // شبیه‌سازی دانلود
                 delay(2000)
@@ -189,6 +202,7 @@ class AiViewModel(
         }
     }
 
+    //------------------------------------------------------------------------
     //download and share the article =>
     fun downloadAndPublish() {
         viewModelScope.launch {
@@ -203,22 +217,47 @@ class AiViewModel(
                 val article = _uiState.value.generatedArticle
 
                 if (article != null) {
-                    // شبیه‌سازی دانلود و انتشار
-                    delay(3000)
+
 
                     // افزودن مقاله به repository
-                    repository.addArticle(article)
-
-                    _uiState.update {
-                        it.copy(
-                            isPublishing = false,
-                            isSuccess = true
-                        )
+                    var published = false
+                    repository.insertArticle(article).collect { result ->
+                        when (result) {
+                            ApiResponse.Loading -> Unit
+                            is ApiResponse.Success -> {
+                                published = true
+                                _uiState.update {
+                                    it.copy(
+                                        isPublishing = false,
+                                        isSuccess = true,
+                                        successMessage = "مقاله شما با موفقیت در لیست مقالات منتشر شد!"
+                                    )
+                                }
+                            }
+                            is ApiResponse.Error -> {
+                                _uiState.update {
+                                    it.copy(
+                                        isPublishing = false,
+                                        errorMessage = result.message
+                                    )
+                                }
+                            }
+                            ApiResponse.NetworkError -> {
+                                _uiState.update {
+                                    it.copy(
+                                        isPublishing = false,
+                                        errorMessage = "لطفا اینترنت خود را چک کنید!"
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     // بعد از 2 ثانیه فرم را ریست کن
                     delay(2000)
-                    resetForm()
+                    if (published) {
+                        resetForm()
+                    }
 
                 } else {
                     throw Exception("مقاله یافت نشد")
@@ -235,21 +274,25 @@ class AiViewModel(
         }
     }
 
+    //------------------------------------------------------------------------
     //success reset =>
     fun resetSuccessState() {
         _uiState.update { it.copy(isSuccess = false) }
     }
 
+    //------------------------------------------------------------------------
     //clear error message =>
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
 
+    //------------------------------------------------------------------------
     //clear success message =>
     fun clearSuccess() {
         _uiState.update { it.copy(successMessage = null) }
     }
 
+    //------------------------------------------------------------------------
     //fully reset =>
     fun resetForm() {
         _uiState.value = AiUiState()

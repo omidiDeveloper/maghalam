@@ -11,6 +11,30 @@ android {
         version = release(36)
     }
 
+    packagingOptions {
+        pickFirsts.add("META-INF/INDEX.LIST")
+        pickFirsts.add("META-INF/io.netty.versions.properties")
+    }
+
+    packaging {
+        resources {
+            // Pick the first occurrence of these files when duplicates are found
+            pickFirsts.add("META-INF/INDEX.LIST")
+            pickFirsts.add("META-INF/io.netty.versions.properties")
+
+            // You might also need these common conflicting files
+            pickFirsts.add("META-INF/DEPENDENCIES")
+            pickFirsts.add("META-INF/LICENSE")
+            pickFirsts.add("META-INF/LICENSE.txt")
+            pickFirsts.add("META-INF/NOTICE")
+            pickFirsts.add("META-INF/NOTICE.txt")
+
+            // Exclude completely if not needed (less common)
+            // excludes.add("META-INF/*.kotlin_module")
+        }
+    }
+
+
     defaultConfig {
         applicationId = "com.example.maghalam"
         minSdk = 24
@@ -31,11 +55,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
@@ -52,6 +76,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material3.lint)
+    implementation(libs.firebase.appdistribution.gradle)
+    implementation(libs.androidx.credentials)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

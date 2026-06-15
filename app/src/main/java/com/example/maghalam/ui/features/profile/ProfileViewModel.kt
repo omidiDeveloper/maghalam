@@ -1,12 +1,13 @@
-// ProfileViewModel.kt
 package com.example.maghalam.ui.features.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.maghalam.utills.SharedPreferencesManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
 
 data class UserProfile(
     val fullName: String = "",
@@ -14,80 +15,145 @@ data class UserProfile(
     val email: String = ""
 )
 
-class ProfileViewModel : ViewModel() {
 
-    private val _userProfile = MutableStateFlow(UserProfile())
-    val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
+class ProfileViewModel(
+    private val preferences: SharedPreferencesManager
+) : ViewModel() {
 
-    private val _articlesCount = MutableStateFlow(0)
-    val articlesCount: StateFlow<Int> = _articlesCount.asStateFlow()
 
-    private val _isDarkMode = MutableStateFlow(false)
-    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
+    private val _userProfile =
+        MutableStateFlow(UserProfile())
 
-    private val _selectedFont = MutableStateFlow("Vazir")
-    val selectedFont: StateFlow<String> = _selectedFont.asStateFlow()
+    val userProfile: StateFlow<UserProfile> =
+        _userProfile.asStateFlow()
+
+
+
+    private val _articlesCount =
+        MutableStateFlow(0)
+
+    val articlesCount: StateFlow<Int> =
+        _articlesCount.asStateFlow()
+
+
+
+    private val _isDarkMode =
+        MutableStateFlow(false)
+
+    val isDarkMode =
+        _isDarkMode.asStateFlow()
+
+
+
+    private val _selectedFont =
+        MutableStateFlow("Vazir")
+
+    val selectedFont =
+        _selectedFont.asStateFlow()
+
+
 
     init {
+
         loadUserProfile()
-        loadArticlesCount()
+
         loadSettings()
+
     }
+
+
 
     private fun loadUserProfile() {
+
         viewModelScope.launch {
-            // TODO: بارگذاری اطلاعات کاربر از دیتابیس یا SharedPreferences
-            _userProfile.value = UserProfile(
-                fullName = "محمد امیدی",
-                username = "mamad_omidi",
-                email = "mmd@m.com"
-            )
+
+            val username =
+                preferences.getUsername() ?: ""
+
+            _userProfile.value =
+                UserProfile(
+                    fullName = username,
+                    username = username,
+                    email = ""
+                )
         }
     }
 
-    private fun loadArticlesCount() {
-        viewModelScope.launch {
-            // TODO: بارگذاری تعداد مقالات از دیتابیس
-            _articlesCount.value = 0
-        }
-    }
+
+
 
     private fun loadSettings() {
-        viewModelScope.launch {
-            // TODO: بارگذاری تنظیمات از SharedPreferences
-            // _isDarkMode.value = preferences.getBoolean("dark_mode", false)
-            // _selectedFont.value = preferences.getString("font", "Vazir") ?: "Vazir"
-        }
+
+        _isDarkMode.value =
+            preferences.getDarkMode()
+
+
+        _selectedFont.value =
+            preferences.getFontSize()
+
     }
+
+
+
 
     fun toggleDarkMode() {
-        viewModelScope.launch {
-            _isDarkMode.value = !_isDarkMode.value
-            // TODO: ذخیره در SharedPreferences
-            // preferences.edit().putBoolean("dark_mode", _isDarkMode.value).apply()
-        }
+
+        val newValue =
+            !_isDarkMode.value
+
+
+        _isDarkMode.value =
+            newValue
+
+
+        preferences.saveDarkMode(newValue)
+
     }
+
+
+
 
     fun setFont(font: String) {
-        viewModelScope.launch {
-            _selectedFont.value = font
-            // TODO: ذخیره در SharedPreferences
-            // preferences.edit().putString("font", font).apply()
-        }
+
+        _selectedFont.value =
+            font
+
+
+        preferences.saveFontSize(font)
+
     }
+
+
+
 
     fun logout() {
+
         viewModelScope.launch {
-            // TODO: پاک کردن اطلاعات کاربر از SharedPreferences
-            // preferences.edit().clear().apply()
+
+            preferences.clearAll()
+
+
+            _userProfile.value =
+                UserProfile()
+
+
+            _isDarkMode.value =
+                false
+
+
+            _selectedFont.value =
+                "Vazir"
         }
     }
 
+
+
+
+
     fun incrementArticlesCount() {
-        viewModelScope.launch {
-            _articlesCount.value += 1
-            // TODO: ذخیره در دیتابیس یا SharedPreferences
-        }
+
+        _articlesCount.value++
+
     }
 
 }

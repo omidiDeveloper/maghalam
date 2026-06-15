@@ -37,7 +37,7 @@ data class Article(
     val createdAt: String? = null, // ISO 8601 format: "2025-05-23T10:30:00"
 
     @SerializedName("userId")
-    val userId: Long
+    val userId: Long?
 ) {
     // Helper function برای نمایش کلمات کلیدی به صورت لیست
     fun getKeywordsList(): List<String> {

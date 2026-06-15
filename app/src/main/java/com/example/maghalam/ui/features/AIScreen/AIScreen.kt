@@ -18,7 +18,7 @@ import com.example.maghalam.R
 
 @Composable
 fun AiScreen(
-    viewModel: AiViewModel = viewModel(),
+    viewModel: AiViewModel,
     onScrollOffsetChanged: (Float) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
