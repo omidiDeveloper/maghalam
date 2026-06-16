@@ -6,28 +6,28 @@ import com.google.gson.annotations.SerializedName
 
 data class UserProfileResponse(
     @SerializedName("id")
-    val id: Long,
+    val id: Long = -1L,
 
     @SerializedName("fullName")
-    val fullName: String,
+    val fullName: String? = "",
 
     @SerializedName("username")
-    val username: String,
+    val username: String? = "",
 
     @SerializedName("email")
-    val email: String,
+    val email: String? = "",
 
     @SerializedName("role")
-    val role: String,
+    val role: String? = "USER",
 
     @SerializedName("publishedArticlesCount")
-    val publishedArticlesCount: Int,
+    val publishedArticlesCount: Int = 0,
 
     @SerializedName("darkMode")
-    val darkMode: Boolean,
+    val darkMode: Boolean = false,
 
     @SerializedName("fontSize")
-    val fontSize: String,
+    val fontSize: String? = "Vazir",
 
     @SerializedName("createdAt")
     val createdAt: String?
@@ -37,27 +37,27 @@ data class UserProfileResponse(
 fun UserProfileResponse.toUser(): User {
     return User(
         id = this.id,
-        fullName = this.fullName,
-        username = this.username,
-        email = this.email,
-        role = this.role,
+        fullName = this.fullName.orEmpty(),
+        username = this.username.orEmpty(),
+        email = this.email.orEmpty(),
+        role = this.role ?: "USER",
         publishedArticlesCount = this.publishedArticlesCount,
         darkMode = this.darkMode,
-        fontSize = this.fontSize,
+        fontSize = this.fontSize ?: "Vazir",
         createdAt = this.createdAt
     )
 }
 
 fun UserProfileResponse.toEntity(): UserEntity {
     return UserEntity(
-        id = this.id ?: 0L,
-        fullName = this.fullName,
-        username = this.username,
-        email = this.email,
-        role = this.role,
+        id = this.id,
+        fullName = this.fullName.orEmpty(),
+        username = this.username.orEmpty(),
+        email = this.email.orEmpty(),
+        role = this.role ?: "USER",
         publishedArticlesCount = this.publishedArticlesCount,
         darkMode = this.darkMode,
-        fontSize = this.fontSize,
+        fontSize = this.fontSize ?: "Vazir",
         createdAt = this.createdAt
     )
 }

@@ -37,6 +37,9 @@ class ItemsViewModel(
     private val _articles = MutableStateFlow<List<Article>>(emptyList())
     val article = _articles.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
     //------------------------------------------------------------------------
     private val _deleteState = MutableStateFlow<ApiResponse<Boolean>?>(null)
 
@@ -58,6 +61,34 @@ class ItemsViewModel(
     fun loadArticles() {
         viewModelScope.launch {
             repository.getArticles().collect { result ->
+                when (result) {
+                    ApiResponse.Loading -> _isLoading.value = true
+                    is ApiResponse.Success -> {
+                        _articles.value = result.data
+                        _isLoading.value = false
+                        _error.value = null
+                    }
+                    is ApiResponse.Error -> {
+                        _isLoading.value = false
+                        _error.value = result.message
+                    }
+                    ApiResponse.NetworkError -> {
+                        _isLoading.value = false
+                        _error.value = "اینترنت در دسترس نیست"
+                    }
+                }
+            }
+        }
+    }
+
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
+        searchArticles()
+    }
+
+    private fun searchArticles() {
+        viewModelScope.launch {
+            repository.searchArticles(_searchQuery.value).collect { result ->
                 when (result) {
                     ApiResponse.Loading -> _isLoading.value = true
                     is ApiResponse.Success -> {

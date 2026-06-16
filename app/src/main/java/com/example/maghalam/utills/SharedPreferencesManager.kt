@@ -14,6 +14,8 @@ class SharedPreferencesManager(context: Context) {
         private const val KEY_TOKEN = "jwt_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_USERNAME = "username"
+        private const val KEY_FULL_NAME = "full_name"
+        private const val KEY_EMAIL = "email"
         private const val KEY_USER_ID = "user_id"
         private const val KEY_USER_ROLE = "user_role"
         private const val KEY_INTRO_SEEN = "intro_seen"
@@ -57,9 +59,17 @@ class SharedPreferencesManager(context: Context) {
     }
 
     // Keeps the current session available after process restarts.
-    fun saveUserInfo(username: String, userId: Long, role: String = "USER") {
+    fun saveUserInfo(
+        username: String,
+        userId: Long,
+        role: String = "USER",
+        fullName: String = "",
+        email: String = ""
+    ) {
         sharedPreferences.edit()
             .putString(KEY_USERNAME, username)
+            .putString(KEY_FULL_NAME, fullName)
+            .putString(KEY_EMAIL, email)
             .putLong(KEY_USER_ID, userId)
             .putString(KEY_USER_ROLE, role)
             .apply()
@@ -68,6 +78,14 @@ class SharedPreferencesManager(context: Context) {
 
     fun getUsername(): String? {
         return sharedPreferences.getString(KEY_USERNAME, null)
+    }
+
+    fun getFullName(): String {
+        return sharedPreferences.getString(KEY_FULL_NAME, "") ?: ""
+    }
+
+    fun getEmail(): String {
+        return sharedPreferences.getString(KEY_EMAIL, "") ?: ""
     }
 
     fun getUserId(): Long {

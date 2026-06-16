@@ -1,13 +1,12 @@
 package com.example.maghalam.ui.features.AIScreen
 
 import com.example.maghalam.model.data.Article
-import com.example.maghalam.model.data.User
 
 data class AiUiState(
     val title: String = "",
     val titleError: String? = null,
 
-    val userId : Long? = null,
+    val userId: Long? = null,
 
     val wordCount: Int = 0,
     val wordCountError: String? = null,
@@ -24,7 +23,7 @@ data class AiUiState(
     val description: String = "",
     val descriptionError: String? = null,
 
-    val content : String = "",
+    val content: String = "",
     val contentError: String? = null,
 
     val isLoading: Boolean = false,

@@ -13,6 +13,9 @@ interface ArticleRepository {
     fun getArticles():
             Flow<ApiResponse<List<Article>>>
 
+    fun searchArticles(keyword: String):
+            Flow<ApiResponse<List<Article>>>
+
 
     fun getArticleById(
         id: Long

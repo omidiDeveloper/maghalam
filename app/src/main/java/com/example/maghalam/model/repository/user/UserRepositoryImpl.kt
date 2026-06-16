@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import java.io.IOException
+import retrofit2.Response
 
 
 @Suppress("UNCHECKED_CAST")
@@ -38,31 +39,21 @@ class UserRepositoryImpl(
 
 
             if (response.isSuccessful) {
-
-
-                val body =
-                    response.body()
-
+                val body = response.body()
 
                 if (body != null) {
-
-                    saveUserSession(body)
-
-
-                    emit(
-                        ApiResponse.Success(body)
-                    )
-
+                    saveUserSession(body, request.username)
+                    emit(ApiResponse.Success(body))
+                } else {
+                    emit(ApiResponse.Error(response.code(), "Empty login response"))
                 }
-
-
             } else {
 
 
                 emit(
                     ApiResponse.Error(
                         response.code(),
-                        response.message()
+                        response.errorMessage()
                     )
                 )
 
@@ -74,6 +65,8 @@ class UserRepositoryImpl(
 
             emit(ApiResponse.NetworkError)
 
+        } catch (e: Exception) {
+            emit(ApiResponse.Error(-1, e.message ?: "Login failed"))
         }
 
     }.flowOn(Dispatchers.IO)
@@ -91,22 +84,26 @@ class UserRepositoryImpl(
                 val body =
                     response.body()
                 if (body != null) {
-                    saveUserSession(body)
+                    saveUserSession(body, request.username)
                     emit(
                         ApiResponse.Success(body)
                     )
+                } else {
+                    emit(ApiResponse.Error(response.code(), "Empty register response"))
                 }
             } else {
                 emit(
                     ApiResponse.Error(
                         response.code(),
-                        response.message()
+                        response.errorMessage()
                     )
                 )
 
             }
         } catch (e: IOException) {
             emit(ApiResponse.NetworkError)
+        } catch (e: Exception) {
+            emit(ApiResponse.Error(-1, e.message ?: "Register failed"))
         }
 
 
@@ -114,27 +111,41 @@ class UserRepositoryImpl(
 
 
     private suspend fun saveUserSession(
-        response: AuthResponse
+        response: AuthResponse,
+        fallbackUsername: String
     ) {
+        val accessToken = response.accessToken
+            ?.takeIf { it.isNotBlank() }
+            ?: error("Authentication response did not include an access token")
+        val user = response.userProfile(fallbackUsername)
 
 
         preferences.saveTokens(
-            response.accessToken,
-            response.refreshToken
+            accessToken,
+            response.refreshToken.orEmpty()
         )
 
 
         preferences.saveUserInfo(
-            response.user.username,
-            response.user.id ?: -1L,
-            response.user.role
+            user.username.orEmpty(),
+            user.id,
+            user.role ?: "USER",
+            user.fullName.orEmpty(),
+            user.email.orEmpty()
         )
 
 
         userDao.insertUser(
-            response.user.toEntity()
+            user.toEntity()
         )
 
+    }
+
+    private fun Response<*>.errorMessage(): String {
+        return errorBody()?.string()
+            ?.takeIf { it.isNotBlank() }
+            ?: message()
+            ?: "Request failed"
     }
 
 

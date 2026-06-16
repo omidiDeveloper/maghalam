@@ -2,11 +2,10 @@ package com.example.maghalam.ui.features.AIScreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.maghalam.model.data.Article
 import com.example.maghalam.model.net.dto.ApiResponse
+import com.example.maghalam.model.net.dto.ArticleGenerationRequest
 import com.example.maghalam.model.repository.TokenInMemory
 import com.example.maghalam.model.repository.article.ArticleRepository
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,31 +16,25 @@ class AiViewModel(
     private val repository: ArticleRepository
 ) : ViewModel() {
 
-    //------------------------------------------------------------------------
     private val _uiState = MutableStateFlow(AiUiState())
     val uiState: StateFlow<AiUiState> = _uiState.asStateFlow()
 
-    //------------------------------------------------------------------------
     fun onTitleChange(newTitle: String) {
-        _uiState.update { it.copy(title = newTitle, titleError = null) }
+        _uiState.update { it.copy(title = newTitle, titleError = null, errorMessage = null) }
     }
 
-    //------------------------------------------------------------------------
     fun onAuthorChange(newAuthor: String) {
-        _uiState.update { it.copy(author = newAuthor, authorError = null) }
+        _uiState.update { it.copy(author = newAuthor, authorError = null, errorMessage = null) }
     }
 
-    //------------------------------------------------------------------------
     fun onKeywordsChange(newKeywords: String) {
-        _uiState.update { it.copy(keywords = newKeywords, keywordsError = null) }
+        _uiState.update { it.copy(keywords = newKeywords, keywordsError = null, errorMessage = null) }
     }
 
-    //------------------------------------------------------------------------
     fun onLanguageDropdownToggle() {
         _uiState.update { it.copy(isLanguageDropdownExpanded = !it.isLanguageDropdownExpanded) }
     }
 
-    //------------------------------------------------------------------------
     fun onLanguageSelect(language: String) {
         _uiState.update {
             it.copy(
@@ -51,252 +44,165 @@ class AiViewModel(
         }
     }
 
-    //------------------------------------------------------------------------
     fun onDescriptionChange(newDescription: String) {
-        _uiState.update { it.copy(description = newDescription, descriptionError = null) }
+        _uiState.update { it.copy(description = newDescription, descriptionError = null, errorMessage = null) }
     }
 
-    //------------------------------------------------------------------------
-    //authorization of values =>
     private fun validateFields(): Boolean {
-        var isValid = true
+        val current = _uiState.value
+        val errors = mutableListOf<String>()
+        val keywords = current.keywords.split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
-        if (_uiState.value.title.isBlank()) {
-            _uiState.update { it.copy(titleError = "عنوان مقاله الزامی است") }
-            isValid = false
-        }
+        val titleError = if (current.title.isBlank()) "عنوان مقاله الزامی است" else null
+        val authorError = if (current.author.isBlank()) "نام نویسنده الزامی است" else null
+        val keywordsError = if (keywords.size < 3) "حداقل ۳ کلمه کلیدی وارد کنید و آن‌ها را با کاما جدا کنید" else null
+        val descriptionError = if (current.description.isBlank()) "توضیحات مقاله الزامی است" else null
 
-        if (_uiState.value.author.isBlank()) {
-            _uiState.update { it.copy(authorError = "نام نویسنده الزامی است") }
-            isValid = false
-        }
+        listOfNotNull(titleError, authorError, keywordsError, descriptionError).let { errors.addAll(it) }
 
-        val keywordsList =
-            _uiState.value.keywords.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        if (keywordsList.size < 3) {
-            _uiState.update { it.copy(keywordsError = "حداقل ۳ کلمه کلیدی وارد کنید (با کاما جدا کنید)") }
-            isValid = false
-        }
-
-        if (_uiState.value.description.isBlank()) {
-            _uiState.update { it.copy(descriptionError = "توضیحات مقاله الزامی است") }
-            isValid = false
-        }
-
-        return isValid
-    }
-
-    //------------------------------------------------------------------------
-    //make summary via AI =>
-    private suspend fun generateSummary(description: String, keywords: String): String {
-        // شبیه‌سازی تاخیر API
-        delay(1500)
-
-        // در واقعیت اینجا باید API Call به سرور AI انجام بشه
-        val keywordsList = keywords.split(",").map { it.trim() }.take(3)
-        return "این مقاله به بررسی ${keywordsList.joinToString("، ")} می‌پردازد و جنبه‌های مختلف آن را تحلیل می‌کند. ${
-            description.take(
-                100
+        _uiState.update {
+            it.copy(
+                titleError = titleError,
+                authorError = authorError,
+                keywordsError = keywordsError,
+                descriptionError = descriptionError,
+                errorMessage = errors.takeIf { list -> list.isNotEmpty() }?.joinToString("\n")
             )
-        }..."
+        }
+
+        return errors.isEmpty()
     }
 
-    //------------------------------------------------------------------------
-    //create article =>
     fun createArticle() {
-        if (!validateFields()) {
-            return
-        }
+        if (!validateFields()) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val current = _uiState.value
+            val keywords = current.keywords.split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
-            try {
-                val currentState = _uiState.value
-
-                // ساخت چکیده توسط AI
-                val summary = generateSummary(
-                    currentState.description,
-                    currentState.keywords
+            repository.generateArticle(
+                ArticleGenerationRequest(
+                    title = current.title.trim(),
+                    author = current.author.trim(),
+                    keywords = keywords,
+                    language = current.selectedLanguage,
+                    description = current.description.trim()
                 )
-
-                // شبیه‌سازی تاخیر ساخت مقاله
-                delay(2000)
-
-                // ایجاد شیء مقاله
-                val article = Article(
-                    id = currentState.articleId ?: System.currentTimeMillis(),
-                    title = currentState.title,
-                    author = currentState.author,
-                    keywords = currentState.keywords,
-                    language = currentState.selectedLanguage,
-                    description = currentState.description,
-                    content = currentState.content.ifBlank { currentState.description },
-                    abstract = summary,
-                    wordCount = currentState.description.split(Regex("\\s+")).count { it.isNotBlank() },
-                    userId = currentState.userId ?: TokenInMemory.userId
-
-                )
-
-                // ذخیره موقت مقاله در state و نمایش دیالوگ
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        showActionDialog = true,
-                        articleId = article.id,
-                        generatedArticle = article
-                    )
-                }
-
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "خطا در ایجاد مقاله: ${e.message}"
-                    )
-                }
-            }
-        }
-    }
-
-    //------------------------------------------------------------------------
-    //dismiss dialog of download article =>
-    fun dismissActionDialog() {
-        _uiState.update { it.copy(showActionDialog = false) }
-        resetForm()
-    }
-
-    //------------------------------------------------------------------------
-    //just download without share =>
-    fun downloadOnly() {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    showActionDialog = false,
-                    isDownloading = true
-                )
-            }
-            try {
-                // شبیه‌سازی دانلود
-                delay(2000)
-
-                _uiState.update {
-                    it.copy(
-                        isDownloading = false,
-                        isSuccess = true
-                    )
-                }
-
-                // بعد از 2 ثانیه فرم را ریست کن
-                delay(2000)
-                resetForm()
-
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isDownloading = false,
-                        errorMessage = "خطا در دانلود مقاله: ${e.message}"
-                    )
-                }
-            }
-        }
-    }
-
-    //------------------------------------------------------------------------
-    //download and share the article =>
-    fun downloadAndPublish() {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    showActionDialog = false,
-                    isPublishing = true
-                )
-            }
-
-            try {
-                val article = _uiState.value.generatedArticle
-
-                if (article != null) {
-
-
-                    // افزودن مقاله به repository
-                    var published = false
-                    repository.insertArticle(article).collect { result ->
-                        when (result) {
-                            ApiResponse.Loading -> Unit
-                            is ApiResponse.Success -> {
-                                published = true
-                                _uiState.update {
-                                    it.copy(
-                                        isPublishing = false,
-                                        isSuccess = true,
-                                        successMessage = "مقاله شما با موفقیت در لیست مقالات منتشر شد!"
-                                    )
-                                }
-                            }
-                            is ApiResponse.Error -> {
-                                _uiState.update {
-                                    it.copy(
-                                        isPublishing = false,
-                                        errorMessage = result.message
-                                    )
-                                }
-                            }
-                            ApiResponse.NetworkError -> {
-                                _uiState.update {
-                                    it.copy(
-                                        isPublishing = false,
-                                        errorMessage = "لطفا اینترنت خود را چک کنید!"
-                                    )
-                                }
-                            }
+            ).collect { result ->
+                when (result) {
+                    ApiResponse.Loading -> _uiState.update {
+                        it.copy(
+                            isLoading = true,
+                            loadingMessage = "در حال ساخت مقاله...",
+                            errorMessage = null,
+                            successMessage = null
+                        )
+                    }
+                    is ApiResponse.Success -> {
+                        val article = result.data.copy(
+                            userId = result.data.userId ?: TokenInMemory.userId,
+                            isPublished = false
+                        )
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                loadingMessage = null,
+                                showActionDialog = true,
+                                articleId = article.id,
+                                generatedArticle = article,
+                                successMessage = "مقاله با موفقیت ساخته شد"
+                            )
                         }
                     }
-
-                    // بعد از 2 ثانیه فرم را ریست کن
-                    delay(2000)
-                    if (published) {
-                        resetForm()
+                    is ApiResponse.Error -> _uiState.update {
+                        it.copy(isLoading = false, loadingMessage = null, errorMessage = result.message)
                     }
-
-                } else {
-                    throw Exception("مقاله یافت نشد")
-                }
-
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isPublishing = false,
-                        errorMessage = "خطا در انتشار مقاله: ${e.message}"
-                    )
+                    ApiResponse.NetworkError -> _uiState.update {
+                        it.copy(isLoading = false, loadingMessage = null, errorMessage = "اینترنت در دسترس نیست")
+                    }
                 }
             }
         }
     }
 
-    //------------------------------------------------------------------------
-    //success reset =>
+    fun dismissActionDialog() {
+        _uiState.update { it.copy(showActionDialog = false) }
+    }
+
+    fun downloadOnly() {
+        viewModelScope.launch {
+            val article = _uiState.value.generatedArticle
+            if (article == null) {
+                _uiState.update { it.copy(errorMessage = "مقاله‌ای برای دانلود پیدا نشد") }
+                return@launch
+            }
+
+            repository.downloadArticle(article, "pdf").collect { result ->
+                when (result) {
+                    ApiResponse.Loading -> _uiState.update {
+                        it.copy(showActionDialog = false, isDownloading = true, errorMessage = null)
+                    }
+                    is ApiResponse.Success -> _uiState.update {
+                        it.copy(
+                            isDownloading = false,
+                            successMessage = "دانلود با موفقیت انجام شد:\n${result.data.absolutePath}"
+                        )
+                    }
+                    is ApiResponse.Error -> _uiState.update {
+                        it.copy(isDownloading = false, errorMessage = result.message)
+                    }
+                    ApiResponse.NetworkError -> _uiState.update {
+                        it.copy(isDownloading = false, errorMessage = "اینترنت در دسترس نیست")
+                    }
+                }
+            }
+        }
+    }
+
+    fun downloadAndPublish() {
+        viewModelScope.launch {
+            val article = _uiState.value.generatedArticle
+            if (article == null) {
+                _uiState.update { it.copy(errorMessage = "مقاله‌ای برای انتشار پیدا نشد") }
+                return@launch
+            }
+
+            repository.insertArticle(article).collect { result ->
+                when (result) {
+                    ApiResponse.Loading -> _uiState.update {
+                        it.copy(showActionDialog = false, isPublishing = true, errorMessage = null)
+                    }
+                    is ApiResponse.Success -> _uiState.update {
+                        it.copy(
+                            isPublishing = false,
+                            isSuccess = true,
+                            successMessage = "مقاله شما با موفقیت منتشر شد و به لیست مقاله‌ها اضافه شد."
+                        )
+                    }
+                    is ApiResponse.Error -> _uiState.update {
+                        it.copy(isPublishing = false, errorMessage = result.message)
+                    }
+                    ApiResponse.NetworkError -> _uiState.update {
+                        it.copy(isPublishing = false, errorMessage = "اینترنت در دسترس نیست")
+                    }
+                }
+            }
+        }
+    }
+
     fun resetSuccessState() {
         _uiState.update { it.copy(isSuccess = false) }
     }
 
-    //------------------------------------------------------------------------
-    //clear error message =>
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
 
-    //------------------------------------------------------------------------
-    //clear success message =>
     fun clearSuccess() {
         _uiState.update { it.copy(successMessage = null) }
     }
 
-    //------------------------------------------------------------------------
-    //fully reset =>
     fun resetForm() {
         _uiState.value = AiUiState()
     }
-
-
 }

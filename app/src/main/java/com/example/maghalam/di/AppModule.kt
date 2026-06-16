@@ -73,7 +73,9 @@ val appModule = module {
 
     viewModel {
         ProfileViewModel(
-            preferences = get()
+            preferences = get(),
+            userRepository = get(),
+            articleRepository = get()
         )
     }
 

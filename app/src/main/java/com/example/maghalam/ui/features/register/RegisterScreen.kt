@@ -114,7 +114,7 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
     val userName = viewModel.username.observeAsState("")
     val email = viewModel.email.observeAsState("")
     val password = viewModel.password.observeAsState("")
-    val rePassword = viewModel.rePassword.observeAsState("")
+    val confirmPassword = viewModel.confirmPassword.observeAsState("")
     val context = LocalContext.current
 
 
@@ -186,10 +186,10 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
                     //RePassword Box =>
                     PasswordEditText(
                         hint = stringResource(R.string.registersc_re_password),
-                        edtValue = rePassword.value,
+                        edtValue = confirmPassword.value,
                         R.drawable.baseline_password_24
                     ) {
-                        viewModel.rePassword.value = it
+                        viewModel.confirmPassword.value = it
                     }
                     //Confirm Button =>
                     Button(
@@ -204,10 +204,10 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
                                     context
                                 ).isWifiConnected
                             ) {
-                                if (name.value.isNotEmpty() && email.value.isNotEmpty() && password.value.isNotEmpty() && rePassword.value.isNotEmpty()) {
+                                if (name.value.isNotBlank() && userName.value.isNotBlank() && email.value.isNotBlank() && password.value.isNotBlank() && confirmPassword.value.isNotBlank()) {
                                     if (Patterns.EMAIL_ADDRESS.matcher(email.value).matches()) {
                                         if (password.value.length >= 8) {
-                                            if (password.value == rePassword.value) {
+                                            if (password.value == confirmPassword.value) {
                                                 viewModel.registerUser(
                                                     onSuccess = {
                                                         Toast.makeText(

@@ -13,6 +13,12 @@ class StartupViewModel(
     private val _isAdmin = MutableStateFlow(preferences.isAdmin())
     val isAdmin = _isAdmin.asStateFlow()
 
+    private val _isDarkMode = MutableStateFlow(preferences.getDarkMode())
+    val isDarkMode = _isDarkMode.asStateFlow()
+
+    private val _selectedFont = MutableStateFlow(preferences.getFontSize())
+    val selectedFont = _selectedFont.asStateFlow()
+
     fun firstDestinationAfterSplash(): String {
         return when {
             !preferences.hasSeenIntro() -> Screens.IntroScreen.rute
@@ -28,5 +34,10 @@ class StartupViewModel(
 
     fun refreshRole() {
         _isAdmin.value = preferences.isAdmin()
+    }
+
+    fun refreshSettings() {
+        _isDarkMode.value = preferences.getDarkMode()
+        _selectedFont.value = preferences.getFontSize()
     }
 }

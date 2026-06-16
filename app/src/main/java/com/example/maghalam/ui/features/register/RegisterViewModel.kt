@@ -15,7 +15,7 @@ class RegisterViewModel(private val userRepository: UserRepository) : ViewModel(
     val username = MutableLiveData("")
     val email = MutableLiveData("")
     val password = MutableLiveData("")
-    val rePassword = MutableLiveData("")
+    val confirmPassword = MutableLiveData("")
 
 
     fun registerUser(
@@ -25,10 +25,11 @@ class RegisterViewModel(private val userRepository: UserRepository) : ViewModel(
         viewModelScope.launch(coroutinesExceptionHandler) {
             userRepository.register(
                 RegisterRequest(
-                    fullName = name.value.orEmpty(),
-                    username = username.value.orEmpty(),
-                    email = email.value.orEmpty(),
-                    password = password.value.orEmpty()
+                    fullName = name.value.orEmpty().trim(),
+                    username = username.value.orEmpty().trim(),
+                    email = email.value.orEmpty().trim(),
+                    password = password.value.orEmpty(),
+                    confirmPassword = confirmPassword.value.orEmpty()
                 )
             ).collect { result ->
                 when (result) {

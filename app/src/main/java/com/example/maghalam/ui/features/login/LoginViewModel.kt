@@ -29,7 +29,7 @@ class LoginViewModel (
         viewModelScope.launch(coroutinesExceptionHandler) {
             userRepository.login(
                 LoginRequest(
-                    username = email.value.orEmpty(),
+                    username = email.value.orEmpty().trim(),
                     password = password.value.orEmpty()
                 )
             ).collect { result ->

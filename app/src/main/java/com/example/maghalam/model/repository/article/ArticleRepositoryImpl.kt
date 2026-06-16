@@ -43,6 +43,31 @@ class ArticleRepositoryImpl(
             .collect { emit(it) }
     }.flowOn(Dispatchers.IO)
 
+    override fun searchArticles(keyword: String): Flow<ApiResponse<List<Article>>> = flow {
+        emit(ApiResponse.Loading)
+
+        val query = keyword.trim()
+        if (query.isBlank()) {
+            articleDao.getAllArticles()
+                .map { entities -> ApiResponse.Success(entities.map { it.toArticle() }) }
+                .collect { emit(it) }
+            return@flow
+        }
+
+        try {
+            val response = articleApiService.searchArticles(query)
+            if (response.isSuccessful) {
+                articleDao.insertArticles(response.body().orEmpty().map { it.toEntity() })
+            }
+        } catch (_: IOException) {
+            // Search falls back to the local cache when the backend is unavailable.
+        }
+
+        articleDao.searchArticles(query)
+            .map { entities -> ApiResponse.Success(entities.map { it.toArticle() }) }
+            .collect { emit(it) }
+    }.flowOn(Dispatchers.IO)
+
     override fun getArticleById(id: Long): Flow<ApiResponse<Article>> = flow {
         emit(ApiResponse.Loading)
 
@@ -88,10 +113,11 @@ class ArticleRepositoryImpl(
 
     override fun insertArticle(article: Article): Flow<ApiResponse<Boolean>> = flow {
         emit(ApiResponse.Loading)
-        articleDao.insertArticle(article.toEntity())
+        val publishedArticle = article.copy(isPublished = true)
+        articleDao.insertArticle(publishedArticle.toEntity())
 
         try {
-            val response = articleApiService.insertArticle(article)
+            val response = articleApiService.insertArticle(publishedArticle)
             if (response.isSuccessful) {
                 response.body()?.let { articleDao.insertArticle(it.toEntity()) }
                 emit(ApiResponse.Success(true))

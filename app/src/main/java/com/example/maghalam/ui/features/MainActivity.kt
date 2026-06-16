@@ -75,9 +75,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            val startupViewModel = koinViewModel<StartupViewModel>()
+            val isDarkMode by startupViewModel.isDarkMode.collectAsState()
+            val selectedFont by startupViewModel.selectedFont.collectAsState()
+
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                MaghalamTheme {
-                    MaghalamScreen()
+                MaghalamTheme(
+                    darkTheme = isDarkMode,
+                    selectedFont = selectedFont,
+                    dynamicColor = false
+                ) {
+                    MaghalamScreen(startupViewModel = startupViewModel)
                 }
             }
         }
@@ -173,6 +181,11 @@ fun MaghalamScreen(
             composable(Screens.ProfileScreen.rute) {
                 ProfileScreen(
                     navController = navController,
+                    onSettingsChanged = startupViewModel::refreshSettings,
+                    onLoggedOut = {
+                        startupViewModel.refreshRole()
+                        startupViewModel.refreshSettings()
+                    },
                     onScrollOffsetChanged = { offset ->
                         val delta = offset - lastScrollOffset
                         lastScrollOffset = offset

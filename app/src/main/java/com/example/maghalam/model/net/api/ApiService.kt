@@ -115,7 +115,7 @@ interface ApiService {
     ): Response<AuthResponse>
 
     @GET("api/auth/refresh")
-    fun refreshToken(refreshToken: String): Call<AuthResponse>
+    fun refreshToken(@Query("refreshToken") refreshToken: String): Call<AuthResponse>
 
 
     @POST("api/auth/logout")

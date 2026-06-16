@@ -26,6 +26,8 @@ import org.koin.compose.viewmodel.koinViewModel
 fun ProfileScreen(
     navController: NavController,
     viewModel: ProfileViewModel = koinViewModel(),
+    onSettingsChanged: () -> Unit = {},
+    onLoggedOut: () -> Unit = {},
     onScrollOffsetChanged: (Float) -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
@@ -63,7 +65,10 @@ fun ProfileScreen(
         AppearanceSettingsSection(
             isDarkMode = isDarkMode,
             selectedFont = selectedFont,
-            onDarkModeToggle = { viewModel.toggleDarkMode() },
+            onDarkModeToggle = {
+                viewModel.toggleDarkMode()
+                onSettingsChanged()
+            },
             onFontClick = { showFontDialog = true }
         )
 
@@ -82,10 +87,12 @@ fun ProfileScreen(
     if (showLogoutDialog) {
         LogoutConfirmationDialog(
             onConfirm = {
-                viewModel.logout()
                 showLogoutDialog = false
-                navController.navigate("login") {
-                    popUpTo(0) { inclusive = true }
+                viewModel.logout {
+                    onLoggedOut()
+                    navController.navigate(Screens.LoginScreen.rute) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             },
             onDismiss = { showLogoutDialog = false }
@@ -98,6 +105,7 @@ fun ProfileScreen(
             selectedFont = selectedFont,
             onFontSelected = { font ->
                 viewModel.setFont(font)
+                onSettingsChanged()
                 showFontDialog = false
             },
             onDismiss = { showFontDialog = false }

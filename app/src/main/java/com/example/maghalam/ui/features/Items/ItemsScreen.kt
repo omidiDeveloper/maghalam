@@ -32,6 +32,7 @@ fun ItemsScreen(
     val viewModel: ItemsViewModel = koinViewModel()
     val listState = rememberLazyListState()
     val article by viewModel.article.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
@@ -83,7 +84,7 @@ fun ItemsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 32.dp),
+                    .padding(top = 48.dp, start = 16.dp, end = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
 //------------------------------------------------------------------------
@@ -96,7 +97,14 @@ fun ItemsScreen(
             }
 //------------------------------------------------------------------------
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SearchBox(
+                value = searchQuery,
+                onValueChange = viewModel::onSearchQueryChange
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
 //------------------------------------------------------------------------
             // لیست مقالات
             if (isLoading && article.isEmpty()) {
@@ -156,6 +164,44 @@ fun ItemsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SearchBox(
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        singleLine = true,
+        label = {
+            Text(
+                text = "جستجوی مقاله",
+                style = MaterialTheme.typography.labelMedium
+            )
+        },
+        placeholder = {
+            Text(
+                text = "عنوان، کلمه کلیدی یا توضیحات",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Right
+            )
+        },
+        textStyle = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Right),
+        leadingIcon = {
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.outline_alternate_email_24),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        shape = MaterialTheme.shapes.medium
+    )
 }
 
 //------------------------------------------------------------------------

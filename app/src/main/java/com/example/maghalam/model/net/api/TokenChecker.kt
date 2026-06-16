@@ -59,9 +59,13 @@ class TokenChecker : Authenticator, KoinComponent {
             val body = response.body()
                 ?: return false
 
+            val accessToken = body.accessToken
+                ?.takeIf { it.isNotBlank() }
+                ?: return false
+
             TokenInMemory.saveToken(
-                body.accessToken,
-                body.refreshToken
+                accessToken,
+                body.refreshToken.orEmpty()
             )
 
             true
