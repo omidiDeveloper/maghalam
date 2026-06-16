@@ -1,5 +1,7 @@
 package com.example.maghalam.model.data
 
+import com.example.maghalam.model.net.dto.KeywordStringAdapter
+import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
 
 data class Article(
@@ -7,24 +9,25 @@ data class Article(
     val id: Long? = null,
 
     @SerializedName("title")
-    val title: String,
+    val title: String = "",
 
     @SerializedName("author")
-    val author: String,
+    val author: String = "",
 
     @SerializedName("keywords")
-    val keywords: String,
+    @JsonAdapter(KeywordStringAdapter::class)
+    val keywords: String = "",
 
     @SerializedName("language")
-    val language: String,
+    val language: String = "",
 
     @SerializedName("description")
-    val description: String,
+    val description: String = "",
 
-    @SerializedName("content")
+    @SerializedName(value = "generatedContent", alternate = ["content"])
     val content: String = "",
 
-    @SerializedName("abstract")
+    @SerializedName(value = "generatedAbstract", alternate = ["abstract"])
     val abstract: String = "",
 
     @SerializedName("wordCount")
@@ -34,10 +37,10 @@ data class Article(
     val isPublished: Boolean = false,
 
     @SerializedName("createdAt")
-    val createdAt: String? = null, // ISO 8601 format: "2025-05-23T10:30:00"
+    val createdAt: String? = null,
 
     @SerializedName("userId")
-    val userId: Long?
+    val userId: Long? = null
 ) {
     // Helper function برای نمایش کلمات کلیدی به صورت لیست
     fun getKeywordsList(): List<String> {

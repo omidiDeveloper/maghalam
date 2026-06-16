@@ -97,7 +97,7 @@ class SharedPreferencesManager(context: Context) {
     }
 
     fun isAdmin(): Boolean {
-        return getUserRole().equals("ADMIN", ignoreCase = true)
+        return getUserRole().contains("ADMIN", ignoreCase = true)
     }
 
     fun hasSeenIntro(): Boolean {

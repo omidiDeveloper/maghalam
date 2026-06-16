@@ -27,10 +27,10 @@ data class ArticleEntity(
     @ColumnInfo(name = "description")
     val description: String = "",
 
-    @ColumnInfo(name = "content")
+    @ColumnInfo(name = "generatedContent")
     val content: String = "",
 
-    @ColumnInfo(name = "abstract")
+    @ColumnInfo(name = "generatedAbstract")
     val abstract: String = "",
 
     @ColumnInfo(name = "word_count")

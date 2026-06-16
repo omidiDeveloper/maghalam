@@ -3,6 +3,7 @@ package com.example.maghalam.model.net.api
 import com.example.maghalam.model.data.Article
 import com.example.maghalam.model.data.User
 import com.example.maghalam.model.net.dto.ArticleGenerationRequest
+import com.example.maghalam.model.net.dto.ArticleResponse
 import com.example.maghalam.model.net.dto.AuthResponse
 import com.example.maghalam.model.net.dto.LoginRequest
 import com.example.maghalam.model.net.dto.RegisterRequest
@@ -58,7 +59,7 @@ interface ApiService {
         @Query("keyword") keyword: String,
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 10
-    ): Response<List<Article>>
+    ): Response<ArticleResponse>
 
     @GET("api/getArticles")
     suspend fun getArticles(): Response<List<Article>>

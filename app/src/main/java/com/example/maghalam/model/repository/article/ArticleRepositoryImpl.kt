@@ -57,7 +57,7 @@ class ArticleRepositoryImpl(
         try {
             val response = articleApiService.searchArticles(query)
             if (response.isSuccessful) {
-                articleDao.insertArticles(response.body().orEmpty().map { it.toEntity() })
+                articleDao.insertArticles(response.body()?.content.orEmpty().map { it.toEntity() })
             }
         } catch (_: IOException) {
             // Search falls back to the local cache when the backend is unavailable.
