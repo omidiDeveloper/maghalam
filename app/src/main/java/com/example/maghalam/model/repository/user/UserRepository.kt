@@ -15,4 +15,6 @@ interface UserRepository {
     fun updateProfile(fullName: String, email: String): Flow<ApiResponse<User>>
     fun updateSettings(darkMode: Boolean, fontSize: String): Flow<ApiResponse<User>>
     fun changePassword(currentPassword: String, newPassword: String): Flow<ApiResponse<Unit>>
+    fun getUsers(): Flow<ApiResponse<List<User>>>
+    fun deleteUser(userId: Long): Flow<ApiResponse<Unit>>
 }

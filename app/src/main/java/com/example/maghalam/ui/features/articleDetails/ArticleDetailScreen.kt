@@ -1,23 +1,47 @@
 package com.example.maghalam.ui.features.articleDetails
 
-
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.maghalam.R
-
+import com.example.maghalam.model.data.Article
 
 @Composable
 fun ArticleDetailScreen(
@@ -26,10 +50,13 @@ fun ArticleDetailScreen(
     viewModel: ArticleDetailViewModel,
     onScrollOffsetChanged: (Float) -> Unit = {}
 ) {
-    val article by viewModel.getArticleById(articleId).collectAsState(initial = null)
+    val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
-    // ردیابی تغییرات اسکرول
+    LaunchedEffect(articleId) {
+        viewModel.loadArticle(articleId)
+    }
+
     LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
         val offset = listState.firstVisibleItemIndex * 1000f + listState.firstVisibleItemScrollOffset
         onScrollOffsetChanged(offset)
@@ -40,261 +67,213 @@ fun ArticleDetailScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        if (article == null) {
-            // حالت بارگذاری
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+        when {
+            state.isLoading && state.article == null -> ArticleDetailSkeleton()
+            state.article != null -> ArticleDetailContent(
+                article = state.article,
+                isDownloading = state.isDownloading,
+                listState = listState,
+                onBack = { navController.popBackStack() },
+                onDownload = viewModel::downloadPdf
+            )
+            else -> ErrorContent(message = state.error ?: "مقاله پیدا نشد", onBack = { navController.popBackStack() })
+        }
+    }
+
+    state.downloadPath?.let { path ->
+        AlertDialog(
+            onDismissRequest = viewModel::clearMessages,
+            title = { Text("دانلود کامل شد", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
+            text = { Text("فایل در حافظه دستگاه ذخیره شد:\n$path", textAlign = TextAlign.Right) },
+            confirmButton = {
+                TextButton(onClick = viewModel::clearMessages) {
+                    Text("باشه")
+                }
             }
-        } else {
-            val currentArticle = article ?: return@Box
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
+        )
+    }
+
+    state.error?.let { message ->
+        AlertDialog(
+            onDismissRequest = viewModel::clearMessages,
+            title = { Text("خطا", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
+            text = { Text(message, textAlign = TextAlign.Right) },
+            confirmButton = {
+                TextButton(onClick = viewModel::clearMessages) {
+                    Text("باشه")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ArticleDetailContent(
+    article: Article?,
+    isDownloading: Boolean,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onBack: () -> Unit,
+    onDownload: () -> Unit
+) {
+    val currentArticle = article ?: return
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                item {
-                    // دکمه بازگشت به مقالات
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { navController.popBackStack() }
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "بازگشت به مقالات",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
+                Button(
+                    onClick = onDownload,
+                    enabled = !isDownloading,
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    if (isDownloading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                    } else {
                         Icon(
-                            imageVector = ImageVector.vectorResource(R.drawable.dorp_down_icon),
-                            contentDescription = "بازگشت",
-                            tint = MaterialTheme.colorScheme.onBackground,
+                            imageVector = ImageVector.vectorResource(R.drawable.download_icon),
+                            contentDescription = null,
                             modifier = Modifier.size(20.dp)
                         )
                     }
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(if (isDownloading) "در حال دانلود" else "دانلود PDF")
                 }
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.arrow_back_icon),
+                        contentDescription = "بازگشت"
+                    )
+                }
+            }
+        }
 
-                item {
+        item { Spacer(modifier = Modifier.height(16.dp)) }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(22.dp)) {
+                    Text(
+                        text = currentArticle.language,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                }
-
-                item {
-                    // کارت اصلی مقاله
-                    Card(
+                    Text(
+                        text = currentArticle.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Right,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "نویسنده: ${currentArticle.author}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Right,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp)
-                        ) {
-                            // زبان
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Start
-                            ) {
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant
-                                ) {
-                                    Text(
-                                        text = currentArticle.language,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // عنوان مقاله
-                            Text(
-                                text = currentArticle.title,
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Right,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // نویسنده
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.End
+                        currentArticle.getKeywordsList().take(4).forEach {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer
                             ) {
                                 Text(
-                                    text = "نویسنده",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = currentArticle.author,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            Divider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // کلمات کلیدی
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.End
-                            ) {
-                                Text(
-                                    text = "کلمات کلیدی",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    currentArticle.getKeywordsList().asReversed().forEach { keyword ->
-                                        Surface(
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = MaterialTheme.colorScheme.secondaryContainer,
-                                            modifier = Modifier.padding(start = 8.dp)
-                                        ) {
-                                            Text(
-                                                text = keyword,
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            Divider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // تعداد کلمات
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.End
-                            ) {
-                                Text(
-                                    text = "تعداد کلمات",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "${currentArticle.wordCount} کلمه",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            Divider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // چکیده
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.End
-                            ) {
-                                Text(
-                                    text = "چکیده",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                Text(
-                                    text = currentArticle.abstract,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    textAlign = TextAlign.Right,
-                                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                                )
-                            }
-
-                            // بدنه
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.End
-                            ) {
-                                Text(
-                                    text = "بدنه",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                Text(
-                                    text = currentArticle.content,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    textAlign = TextAlign.Right,
-                                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(32.dp))
-
-                            // دکمه دانلود
-                            Button(
-                                onClick = { viewModel.downloadOnly() },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                ),
-                                contentPadding = PaddingValues(vertical = 16.dp)
-                            ) {
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(R.drawable.dorp_down_icon),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "دانلود مقاله (PDF)",
-                                    style = MaterialTheme.typography.titleMedium
+                                    text = it,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             }
                         }
                     }
-                }
-
-                // فاصله پایین برای Bottom Navigation
-                item {
-                    Spacer(modifier = Modifier.height(100.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Divider()
+                    ArticleSection("چکیده", currentArticle.abstract.ifBlank { currentArticle.description })
+                    ArticleSection("متن مقاله", currentArticle.content.ifBlank { currentArticle.description })
+                    ArticleSection("مشخصات", "${currentArticle.wordCount} کلمه\nتاریخ: ${currentArticle.getFormattedDate().ifBlank { "ثبت نشده" }}")
                 }
             }
+        }
+
+        item { Spacer(modifier = Modifier.height(100.dp)) }
+    }
+}
+
+@Composable
+private fun ArticleSection(title: String, body: String) {
+    Spacer(modifier = Modifier.height(20.dp))
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Right,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(modifier = Modifier.height(10.dp))
+    Text(
+        text = body.ifBlank { "محتوایی برای نمایش وجود ندارد." },
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurface,
+        textAlign = TextAlign.Right,
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+private fun ArticleDetailSkeleton() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        repeat(6) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(if (it == 0) .55f else 1f)
+                    .height(if (it == 2) 120.dp else 22.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .65f), RoundedCornerShape(8.dp))
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun ErrorContent(message: String, onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(message, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+        Spacer(modifier = Modifier.height(16.dp))
+        TextButton(onClick = onBack) {
+            Text("بازگشت")
         }
     }
 }

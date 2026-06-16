@@ -15,6 +15,8 @@ class SharedPreferencesManager(context: Context) {
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_USERNAME = "username"
         private const val KEY_USER_ID = "user_id"
+        private const val KEY_USER_ROLE = "user_role"
+        private const val KEY_INTRO_SEEN = "intro_seen"
         private const val KEY_DARK_MODE = "dark_mode"
         private const val KEY_FONT_SIZE = "font_size"
     }
@@ -54,13 +56,14 @@ class SharedPreferencesManager(context: Context) {
         TokenInMemory.saveToken(accessToken , refreshToken)
     }
 
-    // User Info
-    fun saveUserInfo(username: String, userId: Long) {
+    // Keeps the current session available after process restarts.
+    fun saveUserInfo(username: String, userId: Long, role: String = "USER") {
         sharedPreferences.edit()
             .putString(KEY_USERNAME, username)
             .putLong(KEY_USER_ID, userId)
+            .putString(KEY_USER_ROLE, role)
             .apply()
-        TokenInMemory.saveUserInfo(username, userId )
+        TokenInMemory.saveUserInfo(username, userId, role)
     }
 
     fun getUsername(): String? {
@@ -69,6 +72,22 @@ class SharedPreferencesManager(context: Context) {
 
     fun getUserId(): Long {
         return sharedPreferences.getLong(KEY_USER_ID, -1L)
+    }
+
+    fun getUserRole(): String {
+        return sharedPreferences.getString(KEY_USER_ROLE, "USER") ?: "USER"
+    }
+
+    fun isAdmin(): Boolean {
+        return getUserRole().equals("ADMIN", ignoreCase = true)
+    }
+
+    fun hasSeenIntro(): Boolean {
+        return sharedPreferences.getBoolean(KEY_INTRO_SEEN, false)
+    }
+
+    fun markIntroSeen() {
+        sharedPreferences.edit().putBoolean(KEY_INTRO_SEEN, true).apply()
     }
 
     // Appearance Settings

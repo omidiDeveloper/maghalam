@@ -32,6 +32,8 @@ fun ItemsScreen(
     val viewModel: ItemsViewModel = koinViewModel()
     val listState = rememberLazyListState()
     val article by viewModel.article.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
 
 //------------------------------------------------------------------------
     // ردیابی تغییرات اسکرول
@@ -97,7 +99,9 @@ fun ItemsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 //------------------------------------------------------------------------
             // لیست مقالات
-            if (article.isEmpty()) {
+            if (isLoading && article.isEmpty()) {
+                ArticleListSkeleton()
+            } else if (article.isEmpty()) {
                 EmptyState()
             } else {
 
@@ -138,6 +142,17 @@ fun ItemsScreen(
                     }
 //------------------------------------------------------------------------
                 }
+            }
+            error?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
@@ -298,4 +313,48 @@ private fun EmptyState() {
             )
         }
     }
+}
+
+@Composable
+private fun ArticleListSkeleton() {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    ) {
+        items(5) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    LoadingBar(widthFraction = .35f)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    LoadingBar(widthFraction = .8f)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    LoadingBar(widthFraction = .55f)
+                    Spacer(modifier = Modifier.height(18.dp))
+                    LoadingBar(widthFraction = 1f, height = 54.dp)
+                }
+            }
+            Spacer(modifier = Modifier.height(22.dp))
+        }
+    }
+}
+
+@Composable
+private fun LoadingBar(
+    widthFraction: Float,
+    height: androidx.compose.ui.unit.Dp = 14.dp
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth(widthFraction)
+            .height(height)
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .65f),
+                shape = MaterialTheme.shapes.small
+            )
+    )
 }

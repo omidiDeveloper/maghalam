@@ -44,6 +44,41 @@ class ItemsViewModel(
     val deleteState = _deleteState.asStateFlow()
 
     //------------------------------------------------------------------------
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading = _isLoading.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error = _error.asStateFlow()
+
+    init {
+        loadArticles()
+    }
+
+    // Keeps the list synchronized with repository/cache updates.
+    fun loadArticles() {
+        viewModelScope.launch {
+            repository.getArticles().collect { result ->
+                when (result) {
+                    ApiResponse.Loading -> _isLoading.value = true
+                    is ApiResponse.Success -> {
+                        _articles.value = result.data
+                        _isLoading.value = false
+                        _error.value = null
+                    }
+                    is ApiResponse.Error -> {
+                        _isLoading.value = false
+                        _error.value = result.message
+                    }
+                    ApiResponse.NetworkError -> {
+                        _isLoading.value = false
+                        _error.value = "اینترنت در دسترس نیست"
+                    }
+                }
+            }
+        }
+    }
+
+    //------------------------------------------------------------------------
     fun deleteArticle(articleId: Long) {
 
         viewModelScope.launch {
@@ -52,6 +87,9 @@ class ItemsViewModel(
                 .collect { result ->
 
                     _deleteState.value = result
+                    if (result is ApiResponse.Success) {
+                        _articles.value = _articles.value.filterNot { it.id == articleId }
+                    }
 
                 }
         }

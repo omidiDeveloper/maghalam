@@ -46,7 +46,12 @@ import com.example.maghalam.utills.Screens
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun LoginScreen(navController: NavController) {
+fun LoginScreen(
+    navController: NavController,
+    onLoginSuccess: () -> Unit = {
+        navController.navigate(Screens.AiScreen.rute)
+    }
+) {
     val viewModel = koinViewModel<LoginViewModel>()
 
     Surface(
@@ -58,7 +63,7 @@ fun LoginScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                LoginScreenView(navController , viewModel)
+                LoginScreenView(navController, viewModel, onLoginSuccess)
             }
         }
     }
@@ -80,7 +85,11 @@ fun LoginScreenPreview() {
 }
 
 @Composable
-fun LoginScreenView(navController: NavController , viewModel: LoginViewModel) {
+fun LoginScreenView(
+    navController: NavController,
+    viewModel: LoginViewModel,
+    onLoginSuccess: () -> Unit
+) {
     val email = viewModel.email.observeAsState("")
     val password = viewModel.password.observeAsState("")
     val context = LocalContext.current
@@ -155,7 +164,7 @@ fun LoginScreenView(navController: NavController , viewModel: LoginViewModel) {
                                         onSuccess = {
                                             Toast.makeText(context, STR_SUCCESS, Toast.LENGTH_SHORT).show()
                                             Log.v("LoginValues", "${viewModel.email.value}")
-                                            navController.navigate(Screens.AiScreen.rute)
+                                            onLoginSuccess()
                                         },
                                         onError = { message ->
                                             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -195,6 +204,11 @@ fun LoginScreenView(navController: NavController , viewModel: LoginViewModel) {
                                 stringResource(R.string.registersc_btn_register)
                             )
                         }
+                    }
+                    TextButton(
+                        onClick = { navController.navigate(Screens.ForgotPasswordScreen.rute) }
+                    ) {
+                        Text("رمز عبور را فراموش کرده‌اید؟")
                     }
                 }
             }

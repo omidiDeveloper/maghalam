@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import java.io.IOException
 
 
@@ -125,7 +126,8 @@ class UserRepositoryImpl(
 
         preferences.saveUserInfo(
             response.user.username,
-            response.user.id ?: -1L
+            response.user.id ?: -1L,
+            response.user.role
         )
 
 
@@ -376,6 +378,43 @@ class UserRepositoryImpl(
         }
 
 
+    }.flowOn(Dispatchers.IO)
+
+    override fun getUsers(): Flow<ApiResponse<List<User>>> = flow {
+        emit(ApiResponse.Loading)
+
+        try {
+            val response = apiService.getUsers()
+            if (response.isSuccessful) {
+                val users = response.body().orEmpty()
+                users.forEach { userDao.insertUser(it.toEntity()) }
+            } else {
+                emit(ApiResponse.Error(response.code(), response.message()))
+            }
+        } catch (_: IOException) {
+            // Admin panel can still show users already cached on this device.
+        }
+
+        userDao.getAllUsers()
+            .map { users -> ApiResponse.Success(users.map { it.toDomain() }) }
+            .collect { emit(it) }
+    }.flowOn(Dispatchers.IO)
+
+    override fun deleteUser(userId: Long): Flow<ApiResponse<Unit>> = flow {
+        emit(ApiResponse.Loading)
+
+        try {
+            val response = apiService.deleteUserById(userId)
+            if (!response.isSuccessful) {
+                emit(ApiResponse.Error(response.code(), response.message()))
+                return@flow
+            }
+        } catch (_: IOException) {
+            // Keep local admin actions responsive when the network drops.
+        }
+
+        userDao.deleteUserById(userId)
+        emit(ApiResponse.Success(Unit))
     }.flowOn(Dispatchers.IO)
 
 }

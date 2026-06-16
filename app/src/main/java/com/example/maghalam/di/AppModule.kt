@@ -9,9 +9,12 @@ import com.example.maghalam.model.repository.user.UserRepository
 import com.example.maghalam.model.repository.user.UserRepositoryImpl
 import com.example.maghalam.ui.features.AIScreen.AiViewModel
 import com.example.maghalam.ui.features.Items.ItemsViewModel
+import com.example.maghalam.ui.features.admin.AdminViewModel
+import com.example.maghalam.ui.features.articleDetails.ArticleDetailViewModel
 import com.example.maghalam.ui.features.login.LoginViewModel
 import com.example.maghalam.ui.features.profile.ProfileViewModel
 import com.example.maghalam.ui.features.register.RegisterViewModel
+import com.example.maghalam.ui.features.startup.StartupViewModel
 import com.example.maghalam.utills.SharedPreferencesManager
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
@@ -32,10 +35,29 @@ val appModule = module {
     single { get<AppDatabase>().articleDao() }
     single { get<AppDatabase>().userDao() }
 
-    single<ArticleRepository> { ArticleRepositoryImpl(get() , get()) }
+    single<ArticleRepository> { ArticleRepositoryImpl(get(), get(), androidContext()) }
 
     single<UserRepository> { UserRepositoryImpl(get() , get() , get()) }
 
+
+    viewModel {
+        StartupViewModel(
+            preferences = get()
+        )
+    }
+
+    viewModel {
+        AdminViewModel(
+            userRepository = get(),
+            articleRepository = get()
+        )
+    }
+
+    viewModel {
+        ArticleDetailViewModel(
+            repository = get()
+        )
+    }
 
     viewModel {
         ItemsViewModel(

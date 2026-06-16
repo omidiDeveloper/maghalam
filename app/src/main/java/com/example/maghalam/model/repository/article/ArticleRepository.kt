@@ -4,6 +4,7 @@ package com.example.maghalam.model.repository.article
 import com.example.maghalam.model.data.Article
 import com.example.maghalam.model.net.dto.ApiResponse
 import com.example.maghalam.model.net.dto.ArticleGenerationRequest
+import java.io.File
 import kotlinx.coroutines.flow.Flow
 
 interface ArticleRepository {
@@ -32,7 +33,8 @@ interface ArticleRepository {
         request: ArticleGenerationRequest
     ): Flow<ApiResponse<Article>>
 
-//    fun downloadArticle(
-//        article: Article
-//    )
+    fun downloadArticle(
+        article: Article,
+        format: String
+    ): Flow<ApiResponse<File>>
 }

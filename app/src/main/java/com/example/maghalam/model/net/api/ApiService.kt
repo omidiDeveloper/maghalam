@@ -1,6 +1,7 @@
 package com.example.maghalam.model.net.api
 
 import com.example.maghalam.model.data.Article
+import com.example.maghalam.model.data.User
 import com.example.maghalam.model.net.dto.ArticleGenerationRequest
 import com.example.maghalam.model.net.dto.AuthResponse
 import com.example.maghalam.model.net.dto.LoginRequest
@@ -16,6 +17,7 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Streaming
 
 interface ApiService {
 
@@ -45,6 +47,7 @@ interface ApiService {
     ): Response<Article>
 
     @GET("api/articles/{id}/download")
+    @Streaming
     suspend fun downloadArticle(
         @Path("id") articleId: Long,
         @Query("format") format: String // "html" or "pdf"
@@ -62,8 +65,17 @@ interface ApiService {
 
     @POST("api/articles")
     suspend fun insertArticle(
+        @Body
         article: Article
     ) : Response<Article>
+
+    @GET("api/users")
+    suspend fun getUsers(): Response<List<User>>
+
+    @DELETE("api/users/{id}")
+    suspend fun deleteUserById(
+        @Path("id") id: Long
+    ): Response<Unit>
 
     //-----------------------------------------------------------------------------------
 

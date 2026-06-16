@@ -1,5 +1,7 @@
 package com.example.maghalam.model.repository.article
 
+import android.content.Context
+import android.os.Environment
 import com.example.maghalam.model.data.Article
 import com.example.maghalam.model.db.dao.ArticleDao
 import com.example.maghalam.model.db.entity.toArticle
@@ -7,336 +9,169 @@ import com.example.maghalam.model.db.entity.toEntity
 import com.example.maghalam.model.net.api.ApiService
 import com.example.maghalam.model.net.dto.ApiResponse
 import com.example.maghalam.model.net.dto.ArticleGenerationRequest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import okhttp3.ResponseBody
+import java.io.File
 import java.io.IOException
-
 
 class ArticleRepositoryImpl(
     private val articleApiService: ApiService,
-    private val articleDao: ArticleDao
+    private val articleDao: ArticleDao,
+    private val context: Context
 ) : ArticleRepository {
 
-
-    override fun getArticles(): Flow<ApiResponse<List<Article>>> {
-
-        return flow {
-
-            emit(ApiResponse.Loading)
-
-
-            try {
-
-                val response =
-                    articleApiService.getArticles()
-
-
-                if(response.isSuccessful){
-
-                    val articles =
-                        response.body().orEmpty()
-
-
-                    articleDao.insertArticles(
-                        articles.map {
-                            it.toEntity()
-                        }
-                    )
-
-                }
-
-
-            } catch(e: IOException){
-
-                // offline mode
-
-            }
-
-
-            articleDao.getAllArticles()
-                .map { entities ->
-
-                    ApiResponse.Success(
-                        entities.map {
-                            it.toArticle()
-                        }
-                    )
-
-                }
-                .collect { emit(it) }
-
-        }
-    }
-
-
-
-    override fun getArticleById(
-        id: Long
-    ): Flow<ApiResponse<Article>> = flow {
-
-
+    override fun getArticles(): Flow<ApiResponse<List<Article>>> = flow {
         emit(ApiResponse.Loading)
 
-
-        val local =
-            articleDao.getArticleById(id)
-
-
-        local?.let {
-
-            emit(
-                ApiResponse.Success(
-                    it.toArticle()
-                )
-            )
-
-        }
-
-
         try {
-
-            val response =
-                articleApiService.getArticleById(id)
-
-
-            if(response.isSuccessful){
-
-                response.body()?.let {
-
-                    articleDao.insertArticle(
-                        it.toEntity()
-                    )
-
-                    emit(
-                        ApiResponse.Success(it)
-                    )
-                }
-
+            val response = articleApiService.getArticles()
+            if (response.isSuccessful) {
+                articleDao.insertArticles(response.body().orEmpty().map { it.toEntity() })
+            } else {
+                emit(ApiResponse.Error(response.code(), response.message()))
             }
-
-
-        }catch(e: IOException){
-
-            if(local == null){
-
-                emit(
-                    ApiResponse.Error(
-                        -1,
-                        "اینترنت در دسترس نیست"
-                    )
-                )
-            }
+        } catch (_: IOException) {
+            // Offline mode intentionally falls back to cached Room data.
         }
 
-    }
+        articleDao.getAllArticles()
+            .map { entities -> ApiResponse.Success(entities.map { it.toArticle() }) }
+            .collect { emit(it) }
+    }.flowOn(Dispatchers.IO)
 
-
-
-    override fun deleteArticle(
-        id: Long
-    ): Flow<ApiResponse<Boolean>> = flow {
-
-
+    override fun getArticleById(id: Long): Flow<ApiResponse<Article>> = flow {
         emit(ApiResponse.Loading)
 
-
-        try {
-
-
-            val response =
-                articleApiService.deleteArticle(id)
-
-
-            if(response.isSuccessful){
-
-
-                articleDao.deleteArticleById(id)
-
-
-                emit(
-                    ApiResponse.Success(true)
-                )
-
-
-            }else{
-
-
-                emit(
-                    ApiResponse.Error(
-                        response.code(),
-                        response.message()
-                    )
-                )
-
-            }
-
-
-
-        }catch(e: IOException){
-
-
-            articleDao.deleteArticleById(id)
-
-
-            emit(
-                ApiResponse.Success(true)
-            )
-            return@flow
-
-
-            emit(
-                ApiResponse.Error(
-                    -1,
-                    "اینترنت در دسترس نیست"
-                )
-            )
-
+        val local = articleDao.getArticleById(id)?.toArticle()
+        if (local != null) {
+            emit(ApiResponse.Success(local))
         }
 
-    }
+        try {
+            val response = articleApiService.getArticleById(id)
+            if (response.isSuccessful) {
+                val article = response.body()
+                if (article != null) {
+                    articleDao.insertArticle(article.toEntity())
+                    emit(ApiResponse.Success(article))
+                }
+            } else if (local == null) {
+                emit(ApiResponse.Error(response.code(), response.message()))
+            }
+        } catch (_: IOException) {
+            if (local == null) {
+                emit(ApiResponse.Error(-1, "اینترنت در دسترس نیست"))
+            }
+        }
+    }.flowOn(Dispatchers.IO)
 
-
-
-
-    override fun insertArticle(
-        article: Article
-    ): Flow<ApiResponse<Boolean>> = flow {
-
-
+    override fun deleteArticle(id: Long): Flow<ApiResponse<Boolean>> = flow {
         emit(ApiResponse.Loading)
 
-        articleDao.insertArticle(
-            article.toEntity()
-        )
-
-
         try {
-
-
-            val response =
-                articleApiService.insertArticle(article)
-
-
-
-            if(response.isSuccessful){
-
-
-                response.body()?.let {
-
-
-                    articleDao.insertArticle(
-                        it.toEntity()
-                    )
-
-                }
-
-
-                emit(
-                    ApiResponse.Success(true)
-                )
-
-
-            }else{
-
-
-                emit(
-                    ApiResponse.Error(
-                        response.code(),
-                        response.message()
-                    )
-                )
-
+            val response = articleApiService.deleteArticle(id)
+            if (!response.isSuccessful) {
+                emit(ApiResponse.Error(response.code(), response.message()))
+                return@flow
             }
-
-
-
-        }catch(e: IOException){
-
-
-            emit(
-                ApiResponse.Success(true)
-            )
-            return@flow
-
-
-            emit(
-                ApiResponse.Error(
-                    -1,
-                    "اینترنت در دسترس نیست"
-                )
-            )
-
+        } catch (_: IOException) {
+            // Allow offline delete from local cache so the admin/list UI stays usable.
         }
 
-    }
+        articleDao.deleteArticleById(id)
+        emit(ApiResponse.Success(true))
+    }.flowOn(Dispatchers.IO)
 
+    override fun insertArticle(article: Article): Flow<ApiResponse<Boolean>> = flow {
+        emit(ApiResponse.Loading)
+        articleDao.insertArticle(article.toEntity())
+
+        try {
+            val response = articleApiService.insertArticle(article)
+            if (response.isSuccessful) {
+                response.body()?.let { articleDao.insertArticle(it.toEntity()) }
+                emit(ApiResponse.Success(true))
+            } else {
+                emit(ApiResponse.Error(response.code(), response.message()))
+            }
+        } catch (_: IOException) {
+            emit(ApiResponse.Success(true))
+        }
+    }.flowOn(Dispatchers.IO)
 
     override fun generateArticle(
         request: ArticleGenerationRequest
     ): Flow<ApiResponse<Article>> = flow {
-
-
         emit(ApiResponse.Loading)
 
-
         try {
-
-
-            val response =
-                articleApiService.generateArticle(request)
-
-
-
-            if(response.isSuccessful){
-
-
+            val response = articleApiService.generateArticle(request)
+            if (response.isSuccessful) {
                 response.body()?.let {
-
-
-                    articleDao.insertArticle(
-                        it.toEntity()
-                    )
-
-
-                    emit(
-                        ApiResponse.Success(it)
-                    )
-
+                    articleDao.insertArticle(it.toEntity())
+                    emit(ApiResponse.Success(it))
                 }
-
-
-
-            }else{
-
-
-                emit(
-                    ApiResponse.Error(
-                        response.code(),
-                        response.message()
-                    )
-                )
-
+            } else {
+                emit(ApiResponse.Error(response.code(), response.message()))
             }
+        } catch (_: IOException) {
+            emit(ApiResponse.Error(-1, "اینترنت در دسترس نیست"))
+        }
+    }.flowOn(Dispatchers.IO)
 
+    override fun downloadArticle(
+        article: Article,
+        format: String
+    ): Flow<ApiResponse<File>> = flow {
+        emit(ApiResponse.Loading)
 
-
-        }catch(e: IOException){
-
-
-            emit(
-                ApiResponse.Error(
-                    -1,
-                    "اینترنت در دسترس نیست"
-                )
-            )
-
+        val articleId = article.id
+        if (articleId == null) {
+            emit(ApiResponse.Error(-1, "شناسه مقاله معتبر نیست"))
+            return@flow
         }
 
+        try {
+            val response = articleApiService.downloadArticle(articleId, format)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    emit(ApiResponse.Success(saveResponseToDownloads(article, format, body)))
+                } else {
+                    emit(ApiResponse.Error(response.code(), "فایل دانلودی خالی است"))
+                }
+            } else {
+                emit(ApiResponse.Error(response.code(), response.message()))
+            }
+        } catch (_: IOException) {
+            emit(ApiResponse.Error(-1, "اینترنت در دسترس نیست"))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    private fun saveResponseToDownloads(
+        article: Article,
+        format: String,
+        body: ResponseBody
+    ): File {
+        val safeTitle = article.title
+            .ifBlank { "article-${article.id}" }
+            .replace(Regex("[\\\\/:*?\"<>|]"), "-")
+            .take(80)
+        val extension = format.lowercase().ifBlank { "pdf" }
+        val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            ?: context.filesDir
+        val file = File(directory, "$safeTitle.$extension")
+
+        body.byteStream().use { input ->
+            file.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+
+        return file
     }
-
-//    override fun downloadArticle(article: Article) {
-//    }
-
-
 }

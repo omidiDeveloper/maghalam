@@ -62,7 +62,8 @@ class MyApplication : Application() {
 
                 TokenInMemory.saveUserInfo(
                     username,
-                    userId
+                    userId,
+                    preferences.getUserRole()
                 )
             }
         }

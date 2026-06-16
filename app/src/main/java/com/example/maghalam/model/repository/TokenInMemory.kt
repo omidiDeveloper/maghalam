@@ -15,6 +15,9 @@ object TokenInMemory {
     var userId: Long? = null
         private set
 
+    var role: String = "USER"
+        private set
+
     fun saveToken(
         accessToken: String,
         refreshToken: String
@@ -25,10 +28,12 @@ object TokenInMemory {
 
     fun saveUserInfo(
         username: String,
-        userId : Long
+        userId : Long,
+        role: String = "USER"
     ){
         this.username = username
         this.userId = userId
+        this.role = role
     }
 
 
@@ -37,5 +42,6 @@ object TokenInMemory {
         refreshToken = null
         username = null
         userId = null
+        role = "USER"
     }
 }
