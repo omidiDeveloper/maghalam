@@ -1,16 +1,28 @@
 package com.example.maghalam.model.net.api
 
 import com.example.maghalam.model.repository.TokenInMemory
+import com.example.maghalam.utills.SharedPreferencesManager
 import okhttp3.Authenticator
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
-class TokenChecker : Authenticator, KoinComponent {
+class TokenChecker(
+    private val sharedPreferencesManager: SharedPreferencesManager,
+    private val baseUrl: String
+) : Authenticator {
 
-    private val authApiService: ApiService by inject()
+    private val authApiService: ApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(OkHttpClient.Builder().build())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ApiService::class.java)
+    }
 
     override fun authenticate(
         route: Route?,
@@ -21,7 +33,11 @@ class TokenChecker : Authenticator, KoinComponent {
             return null
         }
 
-        val refreshToken = TokenInMemory.refreshToken
+        if (response.request.url.encodedPath.contains("/api/auth/refresh")) {
+            return null
+        }
+
+        val refreshToken = TokenInMemory.refreshToken ?: sharedPreferencesManager.getRefreshToken()
             ?: return null
 
         synchronized(this) {
@@ -64,6 +80,10 @@ class TokenChecker : Authenticator, KoinComponent {
                 ?: return false
 
             TokenInMemory.saveToken(
+                accessToken,
+                body.refreshToken.orEmpty()
+            )
+            sharedPreferencesManager.saveTokens(
                 accessToken,
                 body.refreshToken.orEmpty()
             )

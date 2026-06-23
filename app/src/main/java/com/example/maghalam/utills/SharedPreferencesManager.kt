@@ -2,7 +2,10 @@ package com.example.maghalam.utills
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Base64
 import com.example.maghalam.model.repository.TokenInMemory
+import com.google.gson.JsonElement
+import com.google.gson.JsonParser
 
 class SharedPreferencesManager(context: Context) {
 
@@ -97,7 +100,40 @@ class SharedPreferencesManager(context: Context) {
     }
 
     fun isAdmin(): Boolean {
-        return getUserRole().contains("ADMIN", ignoreCase = true)
+        return getUserRole().isAdminRole() || tokenHasAdminRole()
+    }
+
+    private fun tokenHasAdminRole(): Boolean {
+        val token = getToken().orEmpty()
+        if (token.isBlank()) return false
+
+        return runCatching {
+            val payload = token.split(".").getOrNull(1) ?: return@runCatching false
+            val decoded = String(Base64.decode(payload, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP))
+            val json = JsonParser.parseString(decoded).asJsonObject
+
+            json.containsAdminRole()
+        }.getOrDefault(false)
+    }
+
+    private fun JsonElement?.containsAdminRole(): Boolean {
+        if (this == null || isJsonNull) return false
+
+        return when {
+            isJsonPrimitive -> asString.isAdminRole()
+            isJsonArray -> asJsonArray.any { it.containsAdminRole() }
+            isJsonObject -> asJsonObject.entrySet().any { it.value.containsAdminRole() }
+            else -> false
+        }
+    }
+
+    private fun String.isAdminRole(): Boolean {
+        return split(',', ' ', ';')
+            .any { value ->
+                val normalized = value.trim().removePrefix("ROLE_")
+                normalized.equals("ADMIN", ignoreCase = true) ||
+                        normalized.equals("SUPER_ADMIN", ignoreCase = true)
+            } || contains("ADMIN", ignoreCase = true)
     }
 
     fun hasSeenIntro(): Boolean {

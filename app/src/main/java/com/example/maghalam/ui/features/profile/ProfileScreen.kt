@@ -29,6 +29,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,9 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.maghalam.R
@@ -62,6 +65,10 @@ fun ProfileScreen(
     val selectedFont by viewModel.selectedFont.collectAsState()
     val articlesCount by viewModel.articlesCount.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.refreshProfile()
+    }
+
     LaunchedEffect(scrollState.value) {
         onScrollOffsetChanged(scrollState.value.toFloat())
     }
@@ -69,61 +76,64 @@ fun ProfileScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showFontDialog by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(scrollState)
-            .padding(horizontal = 16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(48.dp))
+    // تنظیم کل صفحه به حالت راست‌چین (RTL)
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(48.dp))
 
-        UserInfoSection(userProfile = userProfile, articlesCount = articlesCount)
+            UserInfoSection(userProfile = userProfile, articlesCount = articlesCount)
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        AppearanceSettingsSection(
-            isDarkMode = isDarkMode,
-            selectedFont = selectedFont,
-            onDarkModeToggle = {
-                viewModel.toggleDarkMode()
-                onSettingsChanged()
-            },
-            onFontClick = { showFontDialog = true }
-        )
+            AppearanceSettingsSection(
+                isDarkMode = isDarkMode,
+                selectedFont = selectedFont,
+                onDarkModeToggle = {
+                    viewModel.toggleDarkMode()
+                    onSettingsChanged()
+                },
+                onFontClick = { showFontDialog = true }
+            )
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        LogoutButton(onClick = { showLogoutDialog = true })
+            LogoutButton(onClick = { showLogoutDialog = true })
 
-        Spacer(modifier = Modifier.height(100.dp))
-    }
+            Spacer(modifier = Modifier.height(100.dp))
+        }
 
-    if (showLogoutDialog) {
-        LogoutConfirmationDialog(
-            onConfirm = {
-                showLogoutDialog = false
-                viewModel.logout {
-                    onLoggedOut()
-                    navController.navigate(Screens.LoginScreen.rute) {
-                        popUpTo(0) { inclusive = true }
+        if (showLogoutDialog) {
+            LogoutConfirmationDialog(
+                onConfirm = {
+                    showLogoutDialog = false
+                    viewModel.logout {
+                        onLoggedOut()
+                        navController.navigate(Screens.LoginScreen.rute) {
+                            popUpTo(0) { inclusive = true }
+                        }
                     }
-                }
-            },
-            onDismiss = { showLogoutDialog = false }
-        )
-    }
+                },
+                onDismiss = { showLogoutDialog = false }
+            )
+        }
 
-    if (showFontDialog) {
-        FontSelectionDialog(
-            selectedFont = selectedFont,
-            onFontSelected = { font ->
-                viewModel.setFont(font)
-                onSettingsChanged()
-                showFontDialog = false
-            },
-            onDismiss = { showFontDialog = false }
-        )
+        if (showFontDialog) {
+            FontSelectionDialog(
+                selectedFont = selectedFont,
+                onFontSelected = { font ->
+                    viewModel.setFont(font)
+                    onSettingsChanged()
+                    showFontDialog = false
+                },
+                onDismiss = { showFontDialog = false }
+            )
+        }
     }
 }
 
@@ -172,17 +182,32 @@ private fun UserInfoSection(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            ProfileInfoRow(R.drawable.outline_person_2_24, "نام و نام خانوادگی", userProfile.fullName.ifBlank { "ثبت نشده" })
+            ProfileInfoRow(
+                R.drawable.outline_person_2_24,
+                "نام و نام خانوادگی",
+                userProfile.fullName.ifBlank { "ثبت نشده" }
+            )
             Spacer(modifier = Modifier.height(16.dp))
-            ProfileInfoRow(R.drawable.account_circle_icon, "نام کاربری", userProfile.username.ifBlank { "ثبت نشده" })
+            ProfileInfoRow(
+                R.drawable.account_circle_icon,
+                "نام کاربری",
+                userProfile.username.ifBlank { "ثبت نشده" }
+            )
             Spacer(modifier = Modifier.height(16.dp))
-            ProfileInfoRow(R.drawable.outline_alternate_email_24, "ایمیل", userProfile.email.ifBlank { "ثبت نشده" })
+            ProfileInfoRow(
+                R.drawable.outline_alternate_email_24,
+                "ایمیل",
+                userProfile.email.ifBlank { "ثبت نشده" }
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
-            Divider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            Divider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
-            ProfileInfoRow(R.drawable.write_icon, "مقاله‌های منتشر شده", "$articlesCount مقاله")
+            ProfileInfoRow(R.drawable.write_icon, "تعداد مقاله‌ها", "$articlesCount مقاله")
         }
     }
 }
@@ -194,30 +219,32 @@ private fun ProfileInfoRow(icon: Int, label: String, value: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.Left
-        )
-
+        // بخش سمت راست: آیکون و عنوان
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
             Icon(
                 imageVector = ImageVector.vectorResource(icon),
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+
+        // بخش سمت چپ: مقدار
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.End
+        )
     }
 }
 
@@ -232,7 +259,7 @@ private fun AppearanceSettingsSection(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
             modifier = Modifier
@@ -245,7 +272,7 @@ private fun AppearanceSettingsSection(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Right
+                textAlign = TextAlign.Start
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -276,25 +303,46 @@ private fun AppearanceSettingsSection(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(
-                        imageVector = ImageVector.vectorResource(R.drawable.dorp_down_icon),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(selectedFont, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("فونت برنامه", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
-                        Text("تغییر فونت کل برنامه", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                // سمت راست: آیکون و متن تنظیمات
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Icon(
                         imageVector = ImageVector.vectorResource(R.drawable.outline_serif_24),
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.primary
+                    )
+                    Column(horizontalAlignment = Alignment.Start) {
+                        Text(
+                            "فونت برنامه",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "تغییر فونت کل برنامه",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // سمت چپ: وضعیت فعلی و آیکون دراپ‌داون
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        selectedFont,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.dorp_down_icon),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -314,27 +362,41 @@ private fun SettingRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        control()
-
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(horizontalAlignment = Alignment.End) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+        // سمت راست
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Icon(
                 imageVector = ImageVector.vectorResource(icon),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
+            Column(horizontalAlignment = Alignment.Start) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
+
+        // سمت چپ
+        control()
     }
 }
 
 @Composable
 private fun LogoutButton(onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp , vertical = 20.dp),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -343,7 +405,7 @@ private fun LogoutButton(onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(20.dp),
+                .padding(horizontal = 20.dp , vertical = 18.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -369,21 +431,38 @@ private fun LogoutConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("خروج از حساب", textAlign = TextAlign.Right, modifier = Modifier.fillMaxWidth()) },
-        text = { Text("آیا مطمئن هستید که می‌خواهید از حساب خود خارج شوید؟", textAlign = TextAlign.Right, modifier = Modifier.fillMaxWidth()) },
-        confirmButton = {
-            TextButton(onClick = onConfirm, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                Text("خروج")
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Text(
+                    "خروج از حساب",
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Text(
+                    "آیا مطمئن هستید که می‌خواهید از حساب خود خارج شوید؟",
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = onConfirm,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("خروج")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("انصراف")
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("انصراف")
-            }
-        }
-    )
+        )
+    }
 }
 
 @Composable
@@ -394,30 +473,47 @@ private fun FontSelectionDialog(
 ) {
     val fonts = listOf("Vazir", "B Nazanin", "Roboto")
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("انتخاب فونت", textAlign = TextAlign.Right, modifier = Modifier.fillMaxWidth()) },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                fonts.forEach { font ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onFontSelected(font) }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(selected = selectedFont == font, onClick = { onFontSelected(font) })
-                        Text(font, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), textAlign = TextAlign.Right)
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Text(
+                    "انتخاب فونت",
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    fonts.forEach { font ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onFontSelected(font) }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedFont == font,
+                                onClick = { onFontSelected(font) }
+                            )
+                            Text(
+                                text = font,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 8.dp),
+                                textAlign = TextAlign.Start
+                            )
+                        }
                     }
                 }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("بستن")
+                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("بستن")
-            }
-        }
-    )
+        )
+    }
 }

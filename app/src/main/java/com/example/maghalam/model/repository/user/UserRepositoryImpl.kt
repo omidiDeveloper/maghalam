@@ -13,11 +13,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import android.util.Base64
+import com.google.gson.JsonElement
+import com.google.gson.JsonParser
 import java.io.IOException
 import retrofit2.Response
 
 
-@Suppress("UNCHECKED_CAST")
 class UserRepositoryImpl(
     private val apiService: ApiService,
     private val userDao: UserDao,
@@ -118,6 +120,7 @@ class UserRepositoryImpl(
             ?.takeIf { it.isNotBlank() }
             ?: error("Authentication response did not include an access token")
         val user = response.userProfile(fallbackUsername)
+        val role = resolveRole(response, user.role)
 
 
         preferences.saveTokens(
@@ -129,7 +132,7 @@ class UserRepositoryImpl(
         preferences.saveUserInfo(
             user.username.orEmpty(),
             user.id,
-            user.role ?: "USER",
+            role,
             user.fullName.orEmpty(),
             user.email.orEmpty()
         )
@@ -139,6 +142,71 @@ class UserRepositoryImpl(
             user.toEntity()
         )
 
+    }
+
+    private fun resolveRole(response: AuthResponse, userRole: String?): String {
+        if (listOfNotNull(
+                userRole,
+                response.role,
+                extractRole(response.roles),
+                extractRole(response.authorities),
+                extractRoleFromToken(response.accessToken)
+            ).any { it.contains("ADMIN", ignoreCase = true) }
+        ) {
+            return "ADMIN"
+        }
+
+        return listOfNotNull(
+            userRole,
+            response.role,
+            extractRole(response.roles),
+            extractRole(response.authorities),
+            extractRoleFromToken(response.accessToken)
+        ).firstOrNull { it.contains("ADMIN", ignoreCase = true) || it.contains("USER", ignoreCase = true) }
+            ?: "USER"
+    }
+
+    private fun extractRole(source: JsonElement?): String? {
+        if (source == null || source.isJsonNull) return null
+
+        if (source.containsAdminRole()) return "ADMIN"
+
+        return when {
+            source.isJsonPrimitive -> source.asString
+            source.isJsonArray -> source.asJsonArray.firstNotNullOfOrNull { extractRole(it) }
+            source.isJsonObject -> {
+                val json = source.asJsonObject
+                listOf("role", "name", "authority")
+                    .firstNotNullOfOrNull { key ->
+                        json.get(key)?.takeIf { !it.isJsonNull }?.asString
+                    }
+            }
+            else -> null
+        }
+    }
+
+    private fun JsonElement?.containsAdminRole(): Boolean {
+        if (this == null || isJsonNull) return false
+
+        return when {
+            isJsonPrimitive -> asString.contains("ADMIN", ignoreCase = true)
+            isJsonArray -> asJsonArray.any { it.containsAdminRole() }
+            isJsonObject -> asJsonObject.entrySet().any { it.value.containsAdminRole() }
+            else -> false
+        }
+    }
+
+    private fun extractRoleFromToken(token: String?): String? {
+        if (token.isNullOrBlank()) return null
+
+        return runCatching {
+            val payload = token.split(".").getOrNull(1) ?: return@runCatching null
+            val decoded = String(Base64.decode(payload, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP))
+            val json = JsonParser.parseString(decoded).asJsonObject
+
+            listOf("role", "roles", "authorities", "scope")
+                .firstNotNullOfOrNull { key -> extractRole(json.get(key)) }
+        }.getOrNull()
     }
 
     private fun Response<*>.errorMessage(): String {
@@ -220,15 +288,15 @@ class UserRepositoryImpl(
                 apiService.getUserProfile()
 
             if (response.isSuccessful) {
-                response.body()?.let {
+                response.body()?.let { profile ->
 
 
                     userDao.insertUser(
-                        it.toEntity()
+                        profile.toEntity()
                     )
 
                     emit(
-                        ApiResponse.Success(it)
+                        ApiResponse.Success(profile.toUser())
                     )
 
                 }
@@ -237,7 +305,7 @@ class UserRepositoryImpl(
         } catch (e: IOException) {
             emit(ApiResponse.NetworkError)
         }
-    }.flowOn(Dispatchers.IO) as Flow<ApiResponse<User>>
+    }.flowOn(Dispatchers.IO)
 
 
     override fun updateProfile(
@@ -260,12 +328,12 @@ class UserRepositoryImpl(
                 )
             if (response.isSuccessful) {
 
-                response.body()?.let {
+                response.body()?.let { profile ->
                     userDao.insertUser(
-                        it.toEntity()
+                        profile.toEntity()
                     )
                     emit(
-                        ApiResponse.Success(it)
+                        ApiResponse.Success(profile.toUser())
                     )
 
                 }
@@ -288,7 +356,7 @@ class UserRepositoryImpl(
         }
 
 
-    }.flowOn(Dispatchers.IO) as Flow<ApiResponse<User>>
+    }.flowOn(Dispatchers.IO)
 
 
 
@@ -314,14 +382,14 @@ class UserRepositoryImpl(
             if(response.isSuccessful){
 
 
-                response.body()?.let {
+                response.body()?.let { profile ->
 
                     userDao.insertUser(
-                        it.toEntity()
+                        profile.toEntity()
                     )
 
                     emit(
-                        ApiResponse.Success(it)
+                        ApiResponse.Success(profile.toUser())
                     )
                 }
 
@@ -335,7 +403,7 @@ class UserRepositoryImpl(
             emit(ApiResponse.NetworkError)
 
         }
-    }.flowOn(Dispatchers.IO) as Flow<ApiResponse<User>>
+    }.flowOn(Dispatchers.IO)
 
 
 
@@ -395,20 +463,26 @@ class UserRepositoryImpl(
         emit(ApiResponse.Loading)
 
         try {
-            val response = apiService.getUsers()
+            val adminResponse = apiService.getAdminUsers()
+            val response = if (adminResponse.isSuccessful) {
+                adminResponse
+            } else {
+                apiService.getUsers()
+            }
             if (response.isSuccessful) {
                 val users = response.body().orEmpty()
+                userDao.deleteAllUsers()
                 users.forEach { userDao.insertUser(it.toEntity()) }
+                emit(ApiResponse.Success(users.map { it.toUser() }))
+                return@flow
             } else {
-                emit(ApiResponse.Error(response.code(), response.message()))
+                emit(ApiResponse.Error(response.code(), response.errorMessage()))
+                return@flow
             }
-        } catch (_: IOException) {
-            // Admin panel can still show users already cached on this device.
+        } catch (e: IOException) {
+            emit(ApiResponse.NetworkError)
+            return@flow
         }
-
-        userDao.getAllUsers()
-            .map { users -> ApiResponse.Success(users.map { it.toDomain() }) }
-            .collect { emit(it) }
     }.flowOn(Dispatchers.IO)
 
     override fun deleteUser(userId: Long): Flow<ApiResponse<Unit>> = flow {

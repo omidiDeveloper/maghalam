@@ -41,8 +41,3 @@ data class AiUiState(
     val generatedArticle: Article? = null
 )
 
-val availableLanguages = listOf(
-    "فارسی",
-    "English",
-    "العربية"
-)

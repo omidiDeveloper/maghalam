@@ -134,6 +134,11 @@ fun MaghalamScreen(
         }
     }
 
+    LaunchedEffect(currentRoute) {
+        startupViewModel.refreshRole()
+    }
+
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Box(modifier = Modifier.fillMaxSize()) {
         KoinNavHost(
             navController = navController,
@@ -196,6 +201,7 @@ fun MaghalamScreen(
             composable(Screens.ItemsScreen.rute) {
                 ItemsScreen(
                     navController = navController,
+                    isAdmin = isAdmin,
                     onScrollOffsetChanged = { offset ->
                         val delta = offset - lastScrollOffset
                         lastScrollOffset = offset
@@ -244,6 +250,7 @@ fun MaghalamScreen(
             )
         }
     }
+    }
 }
 
 @Composable
@@ -291,7 +298,7 @@ fun GlassBottomNavigation(
 ) {
     val items = buildList {
         add(BottomNavItem("مقاله‌ها", R.drawable.items_icon))
-        add(BottomNavItem("ساختن", R.drawable.write_icon))
+        add(BottomNavItem("نوشتن", R.drawable.write_icon))
         add(BottomNavItem("پروفایل", R.drawable.outline_person_2_24))
         if (isAdmin) add(BottomNavItem("مدیریت", R.drawable.list_icon))
     }

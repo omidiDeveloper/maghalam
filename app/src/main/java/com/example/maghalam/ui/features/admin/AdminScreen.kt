@@ -97,8 +97,8 @@ fun AdminScreen(
                     items(state.users, key = { it.id ?: it.hashCode().toLong() }) { user ->
                         AdminItemCard(
                             title = user.fullName.ifBlank { user.username },
-                            subtitle = user.email,
-                            meta = "نقش: ${user.role}",
+                            subtitle = "نام کاربری: ${user.username}\nایمیل: ${user.email}\nشناسه: ${user.id ?: "-"}",
+                            meta = "نقش: ${user.role}\nمقاله‌ها: ${user.publishedArticlesCount}",
                             deleteText = "حذف کاربر",
                             onDelete = { user.id?.let(viewModel::deleteUser) }
                         )
@@ -149,12 +149,25 @@ private fun AdminItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(6.dp))
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Right,
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -167,7 +180,12 @@ private fun AdminItemCard(
                 ) {
                     Text(deleteText)
                 }
-                Text(meta, style = MaterialTheme.typography.labelMedium)
+                Text(
+                    meta,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Right
+                )
             }
         }
     }
@@ -175,6 +193,9 @@ private fun AdminItemCard(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             title = { Text("تأیید حذف", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
             text = { Text("این عملیات قابل بازگشت نیست.", textAlign = TextAlign.Right) },
             confirmButton = {
@@ -202,6 +223,9 @@ private fun AdminMessageDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         title = { Text(title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
         text = { Text(body, textAlign = TextAlign.Right) },
         confirmButton = {

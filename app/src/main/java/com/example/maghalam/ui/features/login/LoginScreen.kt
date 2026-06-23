@@ -2,7 +2,6 @@ package com.example.maghalam.ui.features.login
 
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -114,14 +113,15 @@ fun LoginScreenView(
                 modifier = Modifier
                     .wrapContentSize()
                     .padding(top = 22.dp, start = 12.dp, end = 12.dp),
-                elevation = CardDefaults.cardElevation(6.dp)
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
                 Column(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .background(color = MaterialTheme.colorScheme.background)
-                        .padding(top = 32.dp, bottom = 32.dp)
+                        .padding(top = 28.dp, bottom = 24.dp)
 
                 ) {
 
@@ -147,10 +147,13 @@ fun LoginScreenView(
                     Button(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(80.dp)
+                            .height(64.dp)
                             .padding(horizontal = 24.dp, vertical = 12.dp),
-                        colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.primary),
-                        shape = AppShapes.medium,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        shape = MaterialTheme.shapes.medium,
                         onClick = {
                             //check internet connection =>
                             if (NetworkChecker(context).isInternetConnected || NetworkChecker(

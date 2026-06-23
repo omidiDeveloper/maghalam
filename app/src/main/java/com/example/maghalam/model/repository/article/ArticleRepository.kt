@@ -31,6 +31,10 @@ interface ArticleRepository {
         article: Article
     ): Flow<ApiResponse<Boolean>>
 
+    fun publishArticle(
+        article: Article
+    ): Flow<ApiResponse<Article>>
+
 
     fun generateArticle(
         request: ArticleGenerationRequest

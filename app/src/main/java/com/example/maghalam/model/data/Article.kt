@@ -44,7 +44,10 @@ data class Article(
 ) {
     // Helper function برای نمایش کلمات کلیدی به صورت لیست
     fun getKeywordsList(): List<String> {
-        return keywords.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        return keywords
+            .split("،", ",", "؛", ";", "ØŒ")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
     }
 
     // Helper function برای نمایش تاریخ به صورت خوانا

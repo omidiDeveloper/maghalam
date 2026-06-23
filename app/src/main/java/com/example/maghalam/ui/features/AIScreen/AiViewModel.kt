@@ -2,6 +2,7 @@ package com.example.maghalam.ui.features.AIScreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.maghalam.model.data.Article
 import com.example.maghalam.model.net.dto.ApiResponse
 import com.example.maghalam.model.net.dto.ArticleGenerationRequest
 import com.example.maghalam.model.repository.TokenInMemory
@@ -50,15 +51,13 @@ class AiViewModel(
 
     private fun validateFields(): Boolean {
         val current = _uiState.value
-        val errors = mutableListOf<String>()
-        val keywords = current.keywords.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        val keywords = parseKeywords(current.keywords)
 
         val titleError = if (current.title.isBlank()) "عنوان مقاله الزامی است" else null
         val authorError = if (current.author.isBlank()) "نام نویسنده الزامی است" else null
         val keywordsError = if (keywords.size < 3) "حداقل ۳ کلمه کلیدی وارد کنید و آن‌ها را با کاما جدا کنید" else null
         val descriptionError = if (current.description.isBlank()) "توضیحات مقاله الزامی است" else null
-
-        listOfNotNull(titleError, authorError, keywordsError, descriptionError).let { errors.addAll(it) }
+        val errors = listOfNotNull(titleError, authorError, keywordsError, descriptionError)
 
         _uiState.update {
             it.copy(
@@ -78,7 +77,7 @@ class AiViewModel(
 
         viewModelScope.launch {
             val current = _uiState.value
-            val keywords = current.keywords.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val keywords = parseKeywords(current.keywords)
 
             repository.generateArticle(
                 ArticleGenerationRequest(
@@ -105,12 +104,22 @@ class AiViewModel(
                         )
                         _uiState.update {
                             it.copy(
+                                title = "",
+                                titleError = null,
+                                author = "",
+                                authorError = null,
+                                keywords = "",
+                                keywordsError = null,
+                                description = "",
+                                descriptionError = null,
+                                content = "",
+                                contentError = null,
                                 isLoading = false,
                                 loadingMessage = null,
                                 showActionDialog = true,
                                 articleId = article.id,
                                 generatedArticle = article,
-                                successMessage = "مقاله با موفقیت ساخته شد"
+                                successMessage = null
                             )
                         }
                     }
@@ -167,23 +176,51 @@ class AiViewModel(
                 return@launch
             }
 
-            repository.insertArticle(article).collect { result ->
+            repository.publishArticle(article).collect { result ->
                 when (result) {
                     ApiResponse.Loading -> _uiState.update {
                         it.copy(showActionDialog = false, isPublishing = true, errorMessage = null)
                     }
-                    is ApiResponse.Success -> _uiState.update {
-                        it.copy(
-                            isPublishing = false,
-                            isSuccess = true,
-                            successMessage = "مقاله شما با موفقیت منتشر شد و به لیست مقاله‌ها اضافه شد."
-                        )
+                    is ApiResponse.Success -> {
+                        _uiState.update {
+                            it.copy(
+                                isPublishing = false,
+                                isSuccess = true,
+                                generatedArticle = result.data,
+                                successMessage = null
+                            )
+                        }
+                        downloadPublishedArticle(result.data)
                     }
                     is ApiResponse.Error -> _uiState.update {
                         it.copy(isPublishing = false, errorMessage = result.message)
                     }
                     ApiResponse.NetworkError -> _uiState.update {
                         it.copy(isPublishing = false, errorMessage = "اینترنت در دسترس نیست")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun downloadPublishedArticle(article: Article) {
+        viewModelScope.launch {
+            repository.downloadArticle(article, "pdf").collect { result ->
+                when (result) {
+                    ApiResponse.Loading -> _uiState.update {
+                        it.copy(isDownloading = true, errorMessage = null)
+                    }
+                    is ApiResponse.Success -> _uiState.update {
+                        it.copy(
+                            isDownloading = false,
+                            successMessage = "دانلود و انتشار انجام شد:\n${result.data.absolutePath}"
+                        )
+                    }
+                    is ApiResponse.Error -> _uiState.update {
+                        it.copy(isDownloading = false, errorMessage = result.message)
+                    }
+                    ApiResponse.NetworkError -> _uiState.update {
+                        it.copy(isDownloading = false, errorMessage = "اینترنت در دسترس نیست")
                     }
                 }
             }
@@ -204,5 +241,12 @@ class AiViewModel(
 
     fun resetForm() {
         _uiState.value = AiUiState()
+    }
+
+    private fun parseKeywords(value: String): List<String> {
+        return value
+            .split("،", ",", "؛", ";", "ØŒ")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
     }
 }

@@ -1,6 +1,7 @@
 package com.example.maghalam.model.net.dto
 
 import com.google.gson.annotations.SerializedName
+import com.google.gson.JsonElement
 
 //------------------------------------------------
 
@@ -50,6 +51,10 @@ data class AuthResponse(
 
     val role: String? = null,
 
+    val roles: JsonElement? = null,
+
+    val authorities: JsonElement? = null,
+
     val publishedArticlesCount: Int = 0,
 
     val darkMode: Boolean = false,
@@ -66,12 +71,29 @@ data class AuthResponse(
             fullName = fullName.orEmpty(),
             username = username ?: fallbackUsername,
             email = email.orEmpty(),
-            role = role ?: "USER",
+            role = role ?: extractRole(roles) ?: extractRole(authorities) ?: "USER",
             publishedArticlesCount = publishedArticlesCount,
             darkMode = darkMode,
             fontSize = fontSize ?: "Vazir",
             createdAt = createdAt
         )
+    }
+
+    private fun extractRole(source: JsonElement?): String? {
+        if (source == null || source.isJsonNull) return null
+
+        return when {
+            source.isJsonPrimitive -> source.asString
+            source.isJsonArray -> source.asJsonArray.firstNotNullOfOrNull { extractRole(it) }
+            source.isJsonObject -> {
+                val json = source.asJsonObject
+                listOf("role", "name", "authority")
+                    .firstNotNullOfOrNull { key ->
+                        json.get(key)?.takeIf { !it.isJsonNull }?.asString
+                    }
+            }
+            else -> null
+        }
     }
 }
 

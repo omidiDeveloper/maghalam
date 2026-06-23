@@ -11,6 +11,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -39,15 +40,45 @@ val RobotoFontFamily = FontFamily(
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Color(0xFF8FC7E8),
+    onPrimary = Color(0xFF073247),
+    primaryContainer = Color(0xFF164963),
+    onPrimaryContainer = Color(0xFFD8F0FF),
+    secondary = Color(0xFFA7D6C8),
+    onSecondary = Color(0xFF10382F),
+    secondaryContainer = Color(0xFF254E45),
+    onSecondaryContainer = Color(0xFFD6F4EB),
+    tertiary = Color(0xFFE5C07B),
+    onTertiary = Color(0xFF3D2A00),
+    background = Color(0xFF111417),
+    onBackground = Color(0xFFE6EAEE),
+    surface = Color(0xFF191D21),
+    onSurface = Color(0xFFE6EAEE),
+    surfaceVariant = Color(0xFF2B3137),
+    onSurfaceVariant = Color(0xFFC4CDD5),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    outline = Color(0xFF8C969F)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = Color(0xFF246A8D),
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFD3ECF8),
+    onPrimaryContainer = Color(0xFF062D40),
+    secondary = Color(0xFF4F776B),
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFD4EDE5),
+    onSecondaryContainer = Color(0xFF0B3129),
+    tertiary = Color(0xFF8A6A21),
+    onTertiary = Color.White,
+    background = Color(0xFFF7FAFC),
+    onBackground = Color(0xFF1A1D20),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1A1D20),
+    surfaceVariant = Color(0xFFE7EEF3),
+    onSurfaceVariant = Color(0xFF4E5963),
+    outline = Color(0xFF7A858E)
 )
 
 @Composable
@@ -105,6 +136,7 @@ fun MaghalamTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = typography,
+        shapes = AppShapes,
         content = content
     )
 }

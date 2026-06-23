@@ -23,7 +23,10 @@ interface ArticleDao {
     @Query("""
         SELECT * FROM articles 
         WHERE title LIKE '%' || :keyword || '%' 
+        OR author LIKE '%' || :keyword || '%'
         OR keywords LIKE '%' || :keyword || '%'
+        OR generatedAbstract LIKE '%' || :keyword || '%'
+        OR generatedContent LIKE '%' || :keyword || '%'
         OR description LIKE '%' || :keyword || '%'
         ORDER BY created_at DESC
     """)

@@ -34,6 +34,9 @@ class ItemsViewModel(
     val navigateToArticle = _navigateToArticle.asSharedFlow()
 
     //------------------------------------------------------------------------
+    private val _allArticles = MutableStateFlow<List<Article>>(emptyList())
+
+    //------------------------------------------------------------------------
     private val _articles = MutableStateFlow<List<Article>>(emptyList())
     val article = _articles.asStateFlow()
 
@@ -64,7 +67,8 @@ class ItemsViewModel(
                 when (result) {
                     ApiResponse.Loading -> _isLoading.value = true
                     is ApiResponse.Success -> {
-                        _articles.value = result.data
+                        _allArticles.value = result.data
+                        _articles.value = filterArticles(result.data, _searchQuery.value)
                         _isLoading.value = false
                         _error.value = null
                     }
@@ -83,30 +87,37 @@ class ItemsViewModel(
 
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
-        searchArticles()
+        _articles.value = filterArticles(_allArticles.value, query)
     }
 
-    private fun searchArticles() {
-        viewModelScope.launch {
-            repository.searchArticles(_searchQuery.value).collect { result ->
-                when (result) {
-                    ApiResponse.Loading -> _isLoading.value = true
-                    is ApiResponse.Success -> {
-                        _articles.value = result.data
-                        _isLoading.value = false
-                        _error.value = null
-                    }
-                    is ApiResponse.Error -> {
-                        _isLoading.value = false
-                        _error.value = result.message
-                    }
-                    ApiResponse.NetworkError -> {
-                        _isLoading.value = false
-                        _error.value = "اینترنت در دسترس نیست"
-                    }
-                }
-            }
+    private fun filterArticles(articles: List<Article>, query: String): List<Article> {
+        val words = query.normalizedSearchText()
+            .split(" ")
+            .filter { it.isNotBlank() }
+
+        if (words.isEmpty()) return articles
+
+        return articles.filter { article ->
+            val searchableText = buildString {
+                append(article.title).append(' ')
+                append(article.author).append(' ')
+                append(article.keywords).append(' ')
+                append(article.abstract).append(' ')
+                append(article.description).append(' ')
+                append(article.content)
+            }.normalizedSearchText()
+
+            words.any { word -> searchableText.contains(word) }
         }
+    }
+
+    private fun String.normalizedSearchText(): String {
+        return trim()
+            .lowercase()
+            .replace('ي', 'ی')
+            .replace('ك', 'ک')
+            .replace('ة', 'ه')
+            .replace(Regex("\\s+"), " ")
     }
 
     //------------------------------------------------------------------------
@@ -119,7 +130,8 @@ class ItemsViewModel(
 
                     _deleteState.value = result
                     if (result is ApiResponse.Success) {
-                        _articles.value = _articles.value.filterNot { it.id == articleId }
+                        _allArticles.value = _allArticles.value.filterNot { it.id == articleId }
+                        _articles.value = filterArticles(_allArticles.value, _searchQuery.value)
                     }
 
                 }

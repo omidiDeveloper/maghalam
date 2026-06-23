@@ -9,7 +9,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "http://10.96.27.165:8081/"
+    private const val BASE_URL = "http://10.146.96.165:8081/"
 
     fun create(sharedPreferencesManager: SharedPreferencesManager, context: Context): Retrofit {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -19,6 +19,7 @@ object RetrofitClient {
         val okHttpClient = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(sharedPreferencesManager))
             .addInterceptor(loggingInterceptor)
+            .authenticator(TokenChecker(sharedPreferencesManager, BASE_URL))
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)

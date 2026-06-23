@@ -6,12 +6,12 @@ class Converters {
 
     @TypeConverter
     fun fromList(list: List<String>): String {
-        return list.joinToString(",")
+        return list.joinToString("،")
     }
 
     @TypeConverter
     fun toList(data: String): List<String> {
         return if (data.isEmpty()) emptyList()
-        else data.split(",").map { it.trim() }
+        else data.split("،").map { it.trim() }
     }
 }

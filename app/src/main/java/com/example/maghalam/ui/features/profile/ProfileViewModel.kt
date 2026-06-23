@@ -41,6 +41,11 @@ class ProfileViewModel(
         loadArticlesCount()
     }
 
+    fun refreshProfile() {
+        loadUserProfile()
+        loadArticlesCount()
+    }
+
     private fun loadUserProfile() {
         viewModelScope.launch {
             _userProfile.value = UserProfile(
@@ -57,6 +62,7 @@ class ProfileViewModel(
                         username = user.username,
                         email = user.email
                     )
+                    _articlesCount.value = user.publishedArticlesCount
                     preferences.saveUserInfo(
                         username = user.username,
                         userId = user.id ?: preferences.getUserId(),
@@ -75,7 +81,7 @@ class ProfileViewModel(
             articleRepository.getArticles().collect { result ->
                 if (result is ApiResponse.Success) {
                     _articlesCount.value = result.data.count { article ->
-                        article.isPublished && (currentUserId <= 0L || article.userId == currentUserId)
+                        currentUserId <= 0L || article.userId == currentUserId
                     }
                 }
             }

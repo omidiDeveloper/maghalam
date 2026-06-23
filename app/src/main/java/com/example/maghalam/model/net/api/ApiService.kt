@@ -71,7 +71,10 @@ interface ApiService {
     ) : Response<Article>
 
     @GET("api/users")
-    suspend fun getUsers(): Response<List<User>>
+    suspend fun getUsers(): Response<List<UserProfileResponse>>
+
+    @GET("api/admin/users")
+    suspend fun getAdminUsers(): Response<List<UserProfileResponse>>
 
     @DELETE("api/users/{id}")
     suspend fun deleteUserById(

@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,6 +41,13 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.maghalam.R
+import com.example.maghalam.ui.features.register.RegisterScreenView
+import com.example.maghalam.ui.features.register.RegisterViewModel
+import com.example.maghalam.utills.RtlLayout
+import com.example.maghalam.utills.Screens
+import org.koin.compose.viewmodel.koinViewModel
+
+
 
 @Composable
 fun AiScreen(
@@ -144,6 +152,7 @@ private fun ArticleFormCard(
     onDescriptionChange: (String) -> Unit,
     onCreateArticle: () -> Unit
 ) {
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -156,26 +165,62 @@ private fun ArticleFormCard(
                 .padding(20.dp),
             horizontalAlignment = Alignment.End
         ) {
-            ArticleTextField(uiState.title, onTitleChange, "عنوان مقاله", "عنوان مقاله را وارد کنید", uiState.titleError, true)
-            Spacer(modifier = Modifier.height(16.dp))
-            ArticleTextField(uiState.author, onAuthorChange, "نام نویسنده", "نام نویسنده را وارد کنید", uiState.authorError, true)
-            Spacer(modifier = Modifier.height(16.dp))
-            ArticleTextField(uiState.keywords, onKeywordsChange, "کلمات کلیدی", "کلمات کلیدی را با کاما جدا کنید", uiState.keywordsError, false, 2)
-            Spacer(modifier = Modifier.height(16.dp))
-            LanguageDropdown(uiState.selectedLanguage, uiState.isLanguageDropdownExpanded, onLanguageDropdownToggle, onLanguageSelect)
-            Spacer(modifier = Modifier.height(16.dp))
-            ArticleTextField(uiState.description, onDescriptionChange, "توضیحات مقاله", "توضیحات کامل مقاله را وارد کنید", uiState.descriptionError, false, 5)
-            Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
-                onClick = onCreateArticle,
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                contentPadding = PaddingValues(vertical = 16.dp)
-            ) {
-                Text(text = "ایجاد مقاله", style = MaterialTheme.typography.titleMedium)
-            }
+                ArticleTextField(
+                    uiState.title,
+                    onTitleChange,
+                    "عنوان مقاله",
+                    "عنوان مقاله را وارد کنید",
+                    uiState.titleError,
+                    true
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                ArticleTextField(
+                    uiState.author,
+                    onAuthorChange,
+                    "نام نویسنده",
+                    "نام نویسنده را وارد کنید",
+                    uiState.authorError,
+                    true
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                ArticleTextField(
+                    uiState.keywords,
+                    onKeywordsChange,
+                    "کلمات کلیدی",
+                    "کلمات کلیدی را با کاما جدا کنید",
+                    uiState.keywordsError,
+                    false,
+                    2
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                LanguageDropdown(
+                    uiState.selectedLanguage,
+                    uiState.isLanguageDropdownExpanded,
+                    onLanguageDropdownToggle,
+                    onLanguageSelect
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                ArticleTextField(
+                    uiState.description,
+                    onDescriptionChange,
+                    "توضیحات مقاله",
+                    "توضیحات کامل مقاله را وارد کنید",
+                    uiState.descriptionError,
+                    false,
+                    5
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onCreateArticle,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    contentPadding = PaddingValues(vertical = 16.dp)
+                ) {
+                    Text(text = "ایجاد مقاله", style = MaterialTheme.typography.titleMedium)
+                }
         }
     }
 }
@@ -190,31 +235,37 @@ private fun ArticleTextField(
     singleLine: Boolean,
     minLines: Int = 1
 ) {
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
-        Text(text = label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = {
-                Text(
-                    text = placeholder,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Right,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            isError = error != null,
-            singleLine = singleLine,
-            minLines = minLines,
-            shape = MaterialTheme.shapes.medium,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-            ),
-            textStyle = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Right)
-        )
+    RtlLayout {
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(
+                        text = placeholder,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Start,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                isError = error != null,
+                singleLine = singleLine,
+                minLines = minLines,
+                shape = MaterialTheme.shapes.medium,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                ),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Right)
+            )
+        }
     }
 }
 
@@ -227,8 +278,12 @@ private fun LanguageDropdown(
 ) {
     val availableLanguages = listOf("فارسی", "English", "العربية")
 
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
-        Text(text = "زبان مقاله", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+        Text(
+            text = "زبان مقاله",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         Spacer(modifier = Modifier.height(8.dp))
         Box(modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(
@@ -242,19 +297,26 @@ private fun LanguageDropdown(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(ImageVector.vectorResource(R.drawable.dorp_down_icon), contentDescription = null)
+                    Icon(
+                        ImageVector.vectorResource(R.drawable.dorp_down_icon),
+                        contentDescription = null
+                    )
                     Text(text = selectedLanguage, style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
-            DropdownMenu(expanded = isExpanded, onDismissRequest = onToggle, modifier = Modifier.fillMaxWidth(0.9f)) {
+            DropdownMenu(
+                expanded = isExpanded,
+                onDismissRequest = onToggle,
+                modifier = Modifier.fillMaxWidth(0.9f)
+            ) {
                 availableLanguages.forEach { language ->
                     DropdownMenuItem(
                         text = {
                             Text(
                                 text = language,
                                 style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Right,
+                                textAlign = TextAlign.Start,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         },
@@ -291,7 +353,10 @@ private fun ActionSelectionDialog(
             )
         },
         confirmButton = {
-            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Button(onClick = onPublish, modifier = Modifier.fillMaxWidth()) {
                     Text("انتشار در لیست مقاله‌ها")
                 }
@@ -314,6 +379,9 @@ private fun MessageDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         title = { Text(title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
         text = { Text(message, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
         confirmButton = {
@@ -342,9 +410,16 @@ private fun LoadingOverlay(message: String) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 4.dp)
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 4.dp
+                )
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    message,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }

@@ -3,7 +3,6 @@ package com.example.maghalam.ui.features.register
 import android.util.Log
 import android.util.Patterns
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,6 +20,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -139,12 +139,14 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
                 modifier = Modifier
                     .wrapContentSize()
                     .padding(top = 22.dp, start = 12.dp, end = 12.dp),
-                elevation = CardDefaults.cardElevation(6.dp)
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
                 Column(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.background(color = MaterialTheme.colorScheme.background)
+                    modifier = Modifier.padding(top = 24.dp, bottom = 20.dp)
 
                 ) {
 
@@ -195,10 +197,13 @@ fun RegisterScreenView(viewModel: RegisterViewModel, navController: NavControlle
                     Button(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(80.dp)
+                            .height(64.dp)
                             .padding(horizontal = 24.dp, vertical = 12.dp),
-                        colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.primary),
-                        shape = AppShapes.medium,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        shape = MaterialTheme.shapes.medium,
                         onClick = {
                             if (NetworkChecker(context).isInternetConnected || NetworkChecker(
                                     context
@@ -324,6 +329,17 @@ fun PasswordEditText(
         modifier = Modifier
             .fillMaxWidth(.9f)
             .padding(6.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+            unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            focusedTrailingIconColor = MaterialTheme.colorScheme.primary,
+            unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
         visualTransformation = if (passwordVisible.value) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         leadingIcon = {
@@ -382,7 +398,16 @@ fun MainEditText(
         },
         modifier = Modifier
             .fillMaxWidth(.9f)
-            .padding(6.dp)
+            .padding(6.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+            unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
     )
 

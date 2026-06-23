@@ -1,101 +1,99 @@
 package com.example.maghalam.ui.features.Items
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.maghalam.model.data.Article
 import com.example.maghalam.R
+import com.example.maghalam.model.data.Article
 import org.koin.compose.viewmodel.koinViewModel
-
 
 @Composable
 fun ItemsScreen(
     navController: NavController,
+    isAdmin: Boolean = false,
     onScrollOffsetChanged: (Float) -> Unit = {}
 ) {
-//------------------------------------------------------------------------
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        val viewModel: ItemsViewModel = koinViewModel()
+        val listState = rememberLazyListState()
+        val articles by viewModel.article.collectAsState()
+        val searchQuery by viewModel.searchQuery.collectAsState()
+        val isLoading by viewModel.isLoading.collectAsState()
+        val error by viewModel.error.collectAsState()
 
-    val viewModel: ItemsViewModel = koinViewModel()
-    val listState = rememberLazyListState()
-    val article by viewModel.article.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val error by viewModel.error.collectAsState()
-
-//------------------------------------------------------------------------
-    // ردیابی تغییرات اسکرول
-    LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
-        val offset =
-            listState.firstVisibleItemIndex * 1000f + listState.firstVisibleItemScrollOffset
-        onScrollOffsetChanged(offset)
-    }
-
-//------------------------------------------------------------------------
-
-    LaunchedEffect(Unit) {
-        viewModel.navigateToArticle.collect { id ->
-            navController.navigate(
-                "articleDetailScreen/$id"
-            )
+        LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
+            val offset = listState.firstVisibleItemIndex * 1000f + listState.firstVisibleItemScrollOffset
+            onScrollOffsetChanged(offset)
         }
-    }
 
-
-//------------------------------------------------------------------------
-
-    // محاسبه میزان اسکرول برای محو شدن عنوان
-    val titleAlpha by remember {
-        derivedStateOf {
-            if (listState.firstVisibleItemIndex == 0) {
-                1f - (listState.firstVisibleItemScrollOffset / 200f).coerceIn(0f, 1f)
-            } else {
-                0f
+        LaunchedEffect(Unit) {
+            viewModel.navigateToArticle.collect { id ->
+                navController.navigate("articleDetailScreen/$id")
             }
         }
-    }
 
-//------------------------------------------------------------------------
+        val titleAlpha by remember {
+            derivedStateOf {
+                if (listState.firstVisibleItemIndex == 0) {
+                    1f - (listState.firstVisibleItemScrollOffset / 200f).coerceIn(0f, 1f)
+                } else {
+                    0f
+                }
+            }
+        }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-//------------------------------------------------------------------------
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            // عنوان صفحه با قابلیت محو شدن
-//------------------------------------------------------------------------
-            Box(
+            Text(
+                text = "لیست مقاله‌ها",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = titleAlpha),
+                textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 48.dp, start = 16.dp, end = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-//------------------------------------------------------------------------
-                Text(
-                    text = "لیست مقالات",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = titleAlpha),
-                    textAlign = TextAlign.Center
-                )
-            }
-//------------------------------------------------------------------------
+                    .padding(top = 48.dp, start = 16.dp, end = 16.dp)
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -105,52 +103,32 @@ fun ItemsScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-//------------------------------------------------------------------------
-            // لیست مقالات
-            if (isLoading && article.isEmpty()) {
-                ArticleListSkeleton()
-            } else if (article.isEmpty()) {
-                EmptyState()
-            } else {
 
-//------------------------------------------------------------------------
-
-                LazyColumn(
+            when {
+                isLoading && articles.isEmpty() -> ArticleListSkeleton()
+                articles.isEmpty() -> EmptyState()
+                else -> LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp)
                 ) {
-
-//------------------------------------------------------------------------
-
                     items(
-                        items = article,
+                        items = articles,
                         key = { it.id ?: it.hashCode().toLong() }
                     ) { article ->
-                        val articleId = article.id
-
-//------------------------------------------------------------------------
-
                         ArticleCard(
                             article = article,
-                            onDelete = { articleId?.let(viewModel::deleteArticle) },
-                            onClick = {
-                                articleId?.let(viewModel::onArticleClicked)
-                            }
+                            showDelete = isAdmin,
+                            onDelete = { article.id?.let(viewModel::deleteArticle) },
+                            onClick = { article.id?.let(viewModel::onArticleClicked) }
                         )
-//------------------------------------------------------------------------
-
                         Spacer(modifier = Modifier.height(22.dp))
                     }
-//------------------------------------------------------------------------
 
-                    // فاصله پایین برای Bottom Navigation
-                    item {
-                        Spacer(modifier = Modifier.height(100.dp))
-                    }
-//------------------------------------------------------------------------
+                    item { Spacer(modifier = Modifier.height(100.dp)) }
                 }
             }
+
             error?.let {
                 Text(
                     text = it,
@@ -178,15 +156,10 @@ private fun SearchBox(
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
         singleLine = true,
-        label = {
-            Text(
-                text = "جستجوی مقاله",
-                style = MaterialTheme.typography.labelMedium
-            )
-        },
+        label = { Text("جستجوی مقاله", style = MaterialTheme.typography.labelMedium) },
         placeholder = {
             Text(
-                text = "عنوان، کلمه کلیدی یا توضیحات",
+                text = "عنوان، نویسنده، چکیده، متن یا کلمات کلیدی",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Right
@@ -204,11 +177,10 @@ private fun SearchBox(
     )
 }
 
-//------------------------------------------------------------------------
-
 @Composable
 private fun ArticleCard(
     article: Article,
+    showDelete: Boolean,
     onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -217,35 +189,32 @@ private fun ArticleCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp)
+                .padding(20.dp),
+            horizontalAlignment = Alignment.End
         ) {
-            // ردیف بالا: زبان و دکمه حذف
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // دکمه حذف
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = ImageVector.vectorResource(R.drawable.dorp_down_icon),
-                        contentDescription = "حذف مقاله",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                if (showDelete) {
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.baseline_delete_outline_24),
+                            contentDescription = "حذف مقاله",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.size(32.dp))
                 }
 
-                // نمایش زبان
                 Surface(
                     shape = MaterialTheme.shapes.small,
                     color = MaterialTheme.colorScheme.secondaryContainer
@@ -261,34 +230,34 @@ private fun ArticleCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // عنوان مقاله
             Text(
                 text = article.title,
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Right,
+                modifier = Modifier.fillMaxWidth(),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // نویسنده
             Text(
                 text = "نویسنده: ${article.author}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Right
+                textAlign = TextAlign.Right,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // چکیده
             Text(
-                text = article.abstract,
+                text = article.abstract.ifBlank { article.description },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Right,
+                modifier = Modifier.fillMaxWidth(),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
                 lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
@@ -296,7 +265,6 @@ private fun ArticleCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // کلمات کلیدی (فقط ۳ تای اول)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
@@ -321,38 +289,26 @@ private fun ArticleCard(
     }
 }
 
-//------------------------------------------------------------------------
-
 @Composable
 private fun EmptyState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.list_icon),
                 contentDescription = null,
                 modifier = Modifier.size(80.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Text(
                 text = "هنوز مقاله‌ای منتشر نشده است",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(
-                text = "مقالات منتشر شده در اینجا نمایش داده می‌شوند",
+                text = "مقاله‌های منتشر شده در اینجا نمایش داده می‌شوند",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center

@@ -1,5 +1,11 @@
 package com.example.maghalam.ui.features.articleDetails
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,8 +38,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -52,13 +63,24 @@ fun ArticleDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
+    var lastScrollOffset by remember { mutableFloatStateOf(0f) }
+    var isDownloadButtonVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(articleId) {
         viewModel.loadArticle(articleId)
     }
 
     LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
-        val offset = listState.firstVisibleItemIndex * 1000f + listState.firstVisibleItemScrollOffset
+        val offset =
+            listState.firstVisibleItemIndex * 1000f + listState.firstVisibleItemScrollOffset
+        val delta = offset - lastScrollOffset
+        lastScrollOffset = offset
+        isDownloadButtonVisible = when {
+            offset < 24f -> false
+            delta > 10f -> false
+            delta < -10f -> true
+            else -> isDownloadButtonVisible
+        }
         onScrollOffsetChanged(offset)
     }
 
@@ -71,19 +93,46 @@ fun ArticleDetailScreen(
             state.isLoading && state.article == null -> ArticleDetailSkeleton()
             state.article != null -> ArticleDetailContent(
                 article = state.article,
-                isDownloading = state.isDownloading,
                 listState = listState,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
+            )
+
+            else -> ErrorContent(
+                message = state.error ?: "مقاله پیدا نشد",
+                onBack = { navController.popBackStack() })
+        }
+
+        AnimatedVisibility(
+            visible = state.article != null && isDownloadButtonVisible,
+            enter = slideInVertically(
+                initialOffsetY = { it / 2 },
+                animationSpec = tween(220)
+            ) + fadeIn(animationSpec = tween(220)),
+            exit = slideOutVertically(
+                targetOffsetY = { it / 2 },
+                animationSpec = tween(180)
+            ) + fadeOut(animationSpec = tween(180)),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 28.dp)
+        ) {
+            DownloadArticleButton(
+                isDownloading = state.isDownloading,
                 onDownload = viewModel::downloadPdf
             )
-            else -> ErrorContent(message = state.error ?: "مقاله پیدا نشد", onBack = { navController.popBackStack() })
         }
     }
 
     state.downloadPath?.let { path ->
         AlertDialog(
             onDismissRequest = viewModel::clearMessages,
-            title = { Text("دانلود کامل شد", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
+            title = {
+                Text(
+                    "دانلود کامل شد",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Right
+                )
+            },
             text = { Text("فایل در حافظه دستگاه ذخیره شد:\n$path", textAlign = TextAlign.Right) },
             confirmButton = {
                 TextButton(onClick = viewModel::clearMessages) {
@@ -93,10 +142,40 @@ fun ArticleDetailScreen(
         )
     }
 
+    if (state.isDownloading) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = {
+                Text(
+                    "در حال دانلود",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Right
+                )
+            },
+            text = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("لطفا چند لحظه صبر کنید", textAlign = TextAlign.Right)
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
     state.error?.let { message ->
         AlertDialog(
             onDismissRequest = viewModel::clearMessages,
-            title = { Text("خطا", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
+            title = {
+                Text(
+                    "خطا",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Right
+                )
+            },
             text = { Text(message, textAlign = TextAlign.Right) },
             confirmButton = {
                 TextButton(onClick = viewModel::clearMessages) {
@@ -110,13 +189,12 @@ fun ArticleDetailScreen(
 @Composable
 private fun ArticleDetailContent(
     article: Article?,
-    isDownloading: Boolean,
     listState: androidx.compose.foundation.lazy.LazyListState,
-    onBack: () -> Unit,
-    onDownload: () -> Unit
+    onBack: () -> Unit
 ) {
     val currentArticle = article ?: return
 
+    //the list of article as : title , keywords , abstract , content ...etc.
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
@@ -124,32 +202,12 @@ private fun ArticleDetailContent(
     ) {
         item {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp),
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
-                    onClick = onDownload,
-                    enabled = !isDownloading,
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
-                ) {
-                    if (isDownloading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Icon(
-                            imageVector = ImageVector.vectorResource(R.drawable.download_icon),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(if (isDownloading) "در حال دانلود" else "دانلود PDF")
-                }
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = ImageVector.vectorResource(R.drawable.arrow_back_icon),
@@ -169,11 +227,24 @@ private fun ArticleDetailContent(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(22.dp)) {
-                    Text(
-                        text = currentArticle.language,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Surface (
+                        modifier = Modifier.align(  Alignment.End )
+                    ) {
+                        Text(
+                            modifier = Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = MaterialTheme.shapes.medium
+                                )
+                                .padding(vertical = 6.dp, horizontal = 8.dp),
+                            text = currentArticle.language,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Left
+                        )
+                    }
+
+
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = currentArticle.title,
@@ -191,19 +262,27 @@ private fun ArticleDetailContent(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "کلمات کلیدی",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Right,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
                     ) {
                         currentArticle.getKeywordsList().take(4).forEach {
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = MaterialTheme.shapes.medium,
                                 color = MaterialTheme.colorScheme.secondaryContainer
                             ) {
                                 Text(
                                     text = it,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             }
@@ -211,14 +290,92 @@ private fun ArticleDetailContent(
                     }
                     Spacer(modifier = Modifier.height(20.dp))
                     Divider()
-                    ArticleSection("چکیده", currentArticle.abstract.ifBlank { currentArticle.description })
-                    ArticleSection("متن مقاله", currentArticle.content.ifBlank { currentArticle.description })
-                    ArticleSection("مشخصات", "${currentArticle.wordCount} کلمه\nتاریخ: ${currentArticle.getFormattedDate().ifBlank { "ثبت نشده" }}")
+                    ArticleMetaSection(currentArticle)
+                    Divider()
+                    ArticleSection(
+                        "چکیده",
+                        currentArticle.abstract.ifBlank { currentArticle.description })
+                    ArticleSection(
+                        "متن مقاله",
+                        currentArticle.content.ifBlank { currentArticle.description })
                 }
             }
         }
 
         item { Spacer(modifier = Modifier.height(100.dp)) }
+    }
+}
+
+
+@Composable
+private fun DownloadArticleButton(
+    isDownloading: Boolean,
+    onDownload: () -> Unit
+) {
+    Button(
+        onClick = onDownload,
+        enabled = !isDownloading,
+        shape = RoundedCornerShape(18.dp),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
+    ) {
+        if (isDownloading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        } else {
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.download_icon),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(if (isDownloading) "در حال دانلود" else "دانلود مقاله")
+    }
+}
+
+@Composable
+private fun ArticleMetaSection(article: Article) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 18.dp),
+        horizontalAlignment = Alignment.End
+    ) {
+        Text(
+            text = "تعداد کلمات",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Right,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "${article.wordCount} کلمه",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Right,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = "تاریخ ساخت مقاله",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Right,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = article.getFormattedDate().ifBlank { "ثبت نشده" },
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Right,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -254,7 +411,10 @@ private fun ArticleDetailSkeleton() {
                 modifier = Modifier
                     .fillMaxWidth(if (it == 0) .55f else 1f)
                     .height(if (it == 2) 120.dp else 22.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .65f), RoundedCornerShape(8.dp))
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .65f),
+                        RoundedCornerShape(8.dp)
+                    )
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
